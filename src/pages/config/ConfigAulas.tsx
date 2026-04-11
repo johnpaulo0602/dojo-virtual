@@ -4,16 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, BookOpen, Search, X } from "lucide-react";
-import { useUsers } from "@/hooks/use-users";
-import { cn } from "@/lib/utils";
+import { Plus, Pencil, Trash2, BookOpen, Search } from "lucide-react";
+import { useClassGroups, useUpdateClassGroup } from "@/hooks/use-classes";
+import type { ClassGroup, ClassSchedule } from "@/types";
 
 const WEEKDAYS = [
   { key: 1, label: "Seg" },
@@ -25,124 +23,132 @@ const WEEKDAYS = [
   { key: 0, label: "Dom" },
 ];
 
-const turmaOptions = [
-  { id: "t1", name: "Kids Iniciante" },
-  { id: "t2", name: "Kids Avançado" },
-  { id: "t3", name: "Juvenil" },
-  { id: "t4", name: "Competição" },
-];
-
-interface Aula {
-  id: string;
-  turmaId: string;
-  turmaName: string;
-  weekdays: number[];
+interface FlatSchedule {
+  groupId: string;
+  groupName: string;
+  scheduleIndex: number;
+  dayOfWeek: number;
   startTime: string;
   endTime: string;
-  instructorIds: string[];
-  monitorIds: string[];
-  description: string;
 }
 
-const initialAulas: Aula[] = [
-  { id: "a1", turmaId: "t1", turmaName: "Kids Iniciante", weekdays: [1, 3], startTime: "14:00", endTime: "15:00", instructorIds: ["tm1"], monitorIds: ["tm3"], description: "Aula focada em técnicas básicas de solo e fundamentos do Jiu-Jitsu." },
-  { id: "a2", turmaId: "t3", turmaName: "Juvenil", weekdays: [2, 4, 6], startTime: "16:00", endTime: "17:30", instructorIds: ["tm2"], monitorIds: ["tm4"], description: "Treino de raspagens e passagens de guarda para nível intermediário." },
-  { id: "a3", turmaId: "t2", turmaName: "Kids Avançado", weekdays: [1, 3, 5], startTime: "15:00", endTime: "16:00", instructorIds: ["tm1", "tm2"], monitorIds: [], description: "Passagem de guarda e técnicas avançadas." },
-];
-
-function getTeamNames(ids: string[], list: { id: string; name: string }[]) {
-  return ids.map(id => list.find(m => m.id === id)?.name).filter(Boolean).join(", ");
+function flattenSchedules(classGroups: ClassGroup[]): FlatSchedule[] {
+  const result: FlatSchedule[] = [];
+  for (const group of classGroups) {
+    const schedules = group.schedules || [];
+    schedules.forEach((s, idx) => {
+      result.push({
+        groupId: group.id,
+        groupName: group.name,
+        scheduleIndex: idx,
+        dayOfWeek: s.dayOfWeek,
+        startTime: s.startTime,
+        endTime: s.endTime,
+      });
+    });
+  }
+  return result;
 }
 
 export default function ConfigAulasPage() {
   const { setTitle } = usePageTitle();
   useEffect(() => { setTitle("Configurações › Aulas"); }, [setTitle]);
 
-  const { data: usersData = [] } = useUsers("instrutor,monitor");
-  const instrutores = usersData.filter(u => u.role === "instrutor");
-  const monitores = usersData.filter(u => u.role === "monitor");
-  const [aulas, setAulas] = useState<Aula[]>(initialAulas);
+  const { data: classGroups = [], isLoading } = useClassGroups();
+  const updateClassGroup = useUpdateClassGroup();
+
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Aula | null>(null);
+  const [editing, setEditing] = useState<FlatSchedule | null>(null);
   const [form, setForm] = useState({
     turmaId: "",
-    weekdays: [] as number[],
+    dayOfWeek: "1",
     startTime: "14:00",
     endTime: "15:00",
-    instructorIds: [] as string[],
-    monitorIds: [] as string[],
-    description: "",
   });
 
-  const filtered = aulas.filter(a =>
-    a.turmaName.toLowerCase().includes(search.toLowerCase()) ||
-    a.description.toLowerCase().includes(search.toLowerCase())
+  const allSchedules = flattenSchedules(classGroups);
+  const filtered = allSchedules.filter(s =>
+    s.groupName.toLowerCase().includes(search.toLowerCase())
   );
 
   const openNew = () => {
     setEditing(null);
-    setForm({ turmaId: "", weekdays: [], startTime: "14:00", endTime: "15:00", instructorIds: [], monitorIds: [], description: "" });
+    setForm({ turmaId: "", dayOfWeek: "1", startTime: "14:00", endTime: "15:00" });
     setDialogOpen(true);
   };
 
-  const openEdit = (aula: Aula) => {
-    setEditing(aula);
+  const openEdit = (s: FlatSchedule) => {
+    setEditing(s);
     setForm({
-      turmaId: aula.turmaId,
-      weekdays: aula.weekdays,
-      startTime: aula.startTime,
-      endTime: aula.endTime,
-      instructorIds: aula.instructorIds,
-      monitorIds: aula.monitorIds,
-      description: aula.description,
+      turmaId: s.groupId,
+      dayOfWeek: String(s.dayOfWeek),
+      startTime: s.startTime,
+      endTime: s.endTime,
     });
     setDialogOpen(true);
   };
 
-  const toggleWeekday = (day: number) => {
-    setForm(f => ({
-      ...f,
-      weekdays: f.weekdays.includes(day) ? f.weekdays.filter(d => d !== day) : [...f.weekdays, day],
-    }));
-  };
+  const handleSave = async () => {
+    if (!form.turmaId) {
+      toast({ title: "Erro", description: "Selecione uma turma.", variant: "destructive" });
+      return;
+    }
+    const group = classGroups.find(g => g.id === form.turmaId);
+    if (!group) return;
 
-  const toggleMultiSelect = (field: "instructorIds" | "monitorIds", id: string) => {
-    setForm(f => ({
-      ...f,
-      [field]: f[field].includes(id) ? f[field].filter(v => v !== id) : [...f[field], id],
-    }));
-  };
-
-  const handleSave = () => {
-    if (!form.turmaId) { toast({ title: "Erro", description: "Selecione uma turma.", variant: "destructive" }); return; }
-    if (form.weekdays.length === 0) { toast({ title: "Erro", description: "Selecione ao menos um dia da semana.", variant: "destructive" }); return; }
-    if (form.instructorIds.length === 0) { toast({ title: "Erro", description: "Selecione ao menos um instrutor.", variant: "destructive" }); return; }
-
-    const turma = turmaOptions.find(t => t.id === form.turmaId);
-    const data: Omit<Aula, "id"> = {
-      turmaId: form.turmaId,
-      turmaName: turma?.name || "",
-      weekdays: form.weekdays,
+    const newSchedule: ClassSchedule = {
+      dayOfWeek: Number(form.dayOfWeek),
       startTime: form.startTime,
       endTime: form.endTime,
-      instructorIds: form.instructorIds,
-      monitorIds: form.monitorIds,
-      description: form.description,
     };
 
-    if (editing) {
-      setAulas(prev => prev.map(a => a.id === editing.id ? { ...a, ...data } : a));
-      toast({ title: "Aula atualizada" });
+    let updatedSchedules: ClassSchedule[];
+    if (editing && editing.groupId === form.turmaId) {
+      // Edit in-place on the same group
+      updatedSchedules = (group.schedules || []).map((s, idx) =>
+        idx === editing.scheduleIndex ? newSchedule : s
+      );
     } else {
-      setAulas(prev => [...prev, { id: `a${Date.now()}`, ...data }]);
-      toast({ title: "Aula criada" });
+      // New schedule (or turma changed — add to target group)
+      updatedSchedules = [...(group.schedules || []), newSchedule];
+      // If turma changed during edit, also remove from old group
+      if (editing && editing.groupId !== form.turmaId) {
+        const oldGroup = classGroups.find(g => g.id === editing.groupId);
+        if (oldGroup) {
+          const oldSchedules = (oldGroup.schedules || []).filter((_, idx) => idx !== editing.scheduleIndex);
+          try {
+            await updateClassGroup.mutateAsync({ id: oldGroup.id, schedules: oldSchedules });
+          } catch {
+            toast({ title: "Erro", description: "Não foi possível remover da turma anterior.", variant: "destructive" });
+            return;
+          }
+        }
+      }
     }
-    setDialogOpen(false);
+
+    try {
+      await updateClassGroup.mutateAsync({ id: form.turmaId, schedules: updatedSchedules });
+      toast({ title: editing ? "Aula atualizada" : "Aula criada" });
+      setDialogOpen(false);
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível salvar a aula.", variant: "destructive" });
+    }
   };
 
-  const weekdayLabel = (days: number[]) =>
-    WEEKDAYS.filter(w => days.includes(w.key)).map(w => w.label).join(", ");
+  const handleDelete = async (s: FlatSchedule) => {
+    const dayLabel = WEEKDAYS.find(w => w.key === s.dayOfWeek)?.label || String(s.dayOfWeek);
+    if (!confirm(`Deseja excluir a aula de ${s.groupName} na ${dayLabel}?`)) return;
+    const group = classGroups.find(g => g.id === s.groupId);
+    if (!group) return;
+    const updatedSchedules = (group.schedules || []).filter((_, idx) => idx !== s.scheduleIndex);
+    try {
+      await updateClassGroup.mutateAsync({ id: s.groupId, schedules: updatedSchedules });
+      toast({ title: "Aula excluída" });
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível excluir a aula.", variant: "destructive" });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -157,164 +163,89 @@ export default function ConfigAulasPage() {
             <CardTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" />Aulas Cadastradas</CardTitle>
             <div className="relative w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar aula..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+              <Input placeholder="Buscar turma..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Turma</TableHead>
-                <TableHead>Dias</TableHead>
-                <TableHead>Horário</TableHead>
-                <TableHead>Instrutores</TableHead>
-                <TableHead>Monitores</TableHead>
-                <TableHead className="w-16" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map(aula => (
-                <TableRow key={aula.id}>
-                  <TableCell className="font-medium">{aula.turmaName}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1 flex-wrap">
-                      {WEEKDAYS.filter(w => aula.weekdays.includes(w.key)).map(w => (
-                        <Badge key={w.key} variant="secondary" className="text-xs">{w.label}</Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>{aula.startTime} - {aula.endTime}</TableCell>
-                  <TableCell className="text-sm">{getTeamNames(aula.instructorIds, usersData) || "—"}</TableCell>
-                  <TableCell className="text-sm">{getTeamNames(aula.monitorIds, usersData) || "—"}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(aula)}><Pencil className="h-4 w-4" /></Button>
-                  </TableCell>
+          {isLoading ? (
+            <p className="text-center text-muted-foreground py-8">Carregando...</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Turma</TableHead>
+                  <TableHead>Dia</TableHead>
+                  <TableHead>Horário</TableHead>
+                  <TableHead className="w-24" />
                 </TableRow>
-              ))}
-              {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma aula encontrada.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((s, idx) => {
+                  const dayLabel = WEEKDAYS.find(w => w.key === s.dayOfWeek)?.label || String(s.dayOfWeek);
+                  return (
+                    <TableRow key={`${s.groupId}-${s.scheduleIndex}-${idx}`}>
+                      <TableCell className="font-medium">{s.groupName}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">{dayLabel}</Badge>
+                      </TableCell>
+                      <TableCell>{s.startTime} - {s.endTime}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(s)} disabled={updateClassGroup.isPending}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma aula encontrada.</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Aula" : "Nova Aula"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Turma */}
             <div className="space-y-2">
               <Label>Turma *</Label>
               <Select value={form.turmaId} onValueChange={v => setForm(f => ({ ...f, turmaId: v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione a turma" /></SelectTrigger>
                 <SelectContent>
-                  {turmaOptions.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                  {classGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Dias da semana */}
             <div className="space-y-2">
-              <Label>Dias da Semana *</Label>
-              <div className="flex gap-2">
-                {WEEKDAYS.map(w => (
-                  <button
-                    key={w.key}
-                    type="button"
-                    onClick={() => toggleWeekday(w.key)}
-                    className={cn(
-                      "w-10 h-10 rounded-md border text-sm font-medium transition-colors",
-                      form.weekdays.includes(w.key)
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background text-muted-foreground border-border hover:bg-accent"
-                    )}
-                  >
-                    {w.label}
-                  </button>
-                ))}
-              </div>
+              <Label>Dia da Semana *</Label>
+              <Select value={form.dayOfWeek} onValueChange={v => setForm(f => ({ ...f, dayOfWeek: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {WEEKDAYS.map(w => (
+                    <SelectItem key={w.key} value={String(w.key)}>{w.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Horário */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Hora Início</Label><Input type="time" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} /></div>
               <div className="space-y-2"><Label>Hora Fim</Label><Input type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} /></div>
             </div>
-
-            {/* Instrutores multiselect */}
-            <div className="space-y-2">
-              <Label>Instrutores *</Label>
-              <div className="space-y-2">
-                {form.instructorIds.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {form.instructorIds.map(id => {
-                      const m = instrutores.find(i => i.id === id);
-                      return m ? (
-                        <Badge key={id} variant="secondary" className="gap-1">
-                          {m.name}
-                          <button type="button" onClick={() => toggleMultiSelect("instructorIds", id)} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
-                        </Badge>
-                      ) : null;
-                    })}
-                  </div>
-                )}
-                <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
-                  {instrutores.map(i => (
-                    <label key={i.id} className="flex items-center gap-2 cursor-pointer text-sm py-1 px-1 rounded hover:bg-accent">
-                      <Checkbox checked={form.instructorIds.includes(i.id)} onCheckedChange={() => toggleMultiSelect("instructorIds", i.id)} />
-                      {i.name}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Monitores multiselect */}
-            <div className="space-y-2">
-              <Label>Monitores</Label>
-              <div className="space-y-2">
-                {form.monitorIds.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {form.monitorIds.map(id => {
-                      const m = monitores.find(i => i.id === id);
-                      return m ? (
-                        <Badge key={id} variant="secondary" className="gap-1">
-                          {m.name}
-                          <button type="button" onClick={() => toggleMultiSelect("monitorIds", id)} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
-                        </Badge>
-                      ) : null;
-                    })}
-                  </div>
-                )}
-                <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
-                  {monitores.map(m => (
-                    <label key={m.id} className="flex items-center gap-2 cursor-pointer text-sm py-1 px-1 rounded hover:bg-accent">
-                      <Checkbox checked={form.monitorIds.includes(m.id)} onCheckedChange={() => toggleMultiSelect("monitorIds", m.id)} />
-                      {m.name}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Descrição */}
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea
-                value={form.description}
-                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Ex: Aula focada em técnicas de solo e fundamentos para iniciantes no Jiu-Jitsu."
-                rows={3}
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editing ? "Salvar" : "Criar"}</Button>
+            <Button onClick={handleSave} disabled={updateClassGroup.isPending}>
+              {updateClassGroup.isPending ? "Salvando..." : editing ? "Salvar" : "Criar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -56,7 +56,7 @@ const roleLabels: Record<UserRole, string> = {
 };
 
 export function AppSidebar() {
-  const { user, setRole, logout } = useAuth();
+  const { user, logout } = useAuth();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
@@ -249,20 +249,6 @@ export function AppSidebar() {
                   <DropdownMenuItem onClick={() => navigate("/conta")} className="rounded-lg">
                     <UserIcon className="mr-2 size-4 opacity-70" /> Perfil
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">
-                    Trocar Perfil (Dev)
-                  </DropdownMenuLabel>                  {(["admin", "instrutor", "monitor", "responsavel"] as UserRole[]).map(
-                    (role) => (
-                      <DropdownMenuItem
-                        key={role}
-                        onClick={() => setRole(role)}
-                        className={cn("rounded-lg text-xs font-medium", user.role === role && "bg-accent text-accent-foreground")}
-                      >
-                        {roleLabels[role]}
-                      </DropdownMenuItem>
-                    )
-                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} className="rounded-lg text-destructive focus:text-destructive focus:bg-destructive/10">
                     <LogOut className="mr-2 size-4" /> Sair

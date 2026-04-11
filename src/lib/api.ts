@@ -40,7 +40,7 @@ function transformKeys(obj: unknown, fn: (s: string) => string): unknown {
 
 // Request interceptor: camelCase → snake_case for JSON bodies
 api.interceptors.request.use((config) => {
-  if (config.data && typeof config.data === "object" && !(config.data instanceof FormData)) {
+  if (config.data && typeof config.data === "object" && !(config.data instanceof FormData) && !(config.data instanceof URLSearchParams)) {
     config.data = transformKeys(config.data, camelToSnake);
   }
   return config;

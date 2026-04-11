@@ -44,8 +44,8 @@ export function LoginForm({
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
       
-      const { access_token, refresh_token } = response.data;
-      await login(access_token, refresh_token);
+      const { accessToken, refreshToken } = response.data;
+      await login(accessToken, refreshToken);
       
       toast.success("Login realizado com sucesso!");
       navigate("/");

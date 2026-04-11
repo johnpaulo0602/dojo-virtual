@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: oklch(1.0 0 0);
+    --foreground: oklch(0.25 0.02 250);
+    --card: oklch(1.0 0 0);
+    --card-foreground: oklch(0.25 0.02 250);
+    --popover: oklch(1.0 0 0);
+    --popover-foreground: oklch(0.25 0.02 250);
+    --primary: oklch(0.6 0.2 30);
+    --primary-foreground: oklch(1.0 0 0);
+    --secondary: oklch(0.96 0.005 250);
+    --secondary-foreground: oklch(0.25 0.02 250);
+    --muted: oklch(0.96 0.005 250);
+    --muted-foreground: oklch(0.5 0.01 250);
+    --accent: oklch(0.96 0.005 250);
+    --accent-foreground: oklch(0.25 0.02 250);
+    --destructive: oklch(0.55 0.18 25);
+    --destructive-foreground: oklch(1.0 0 0);
+    --border: oklch(0.93 0.005 250);
+    --input: oklch(0.93 0.005 250);
+    --ring: oklch(0.25 0.02 250 / 0.1);
+    --radius: 0.75rem;
+    
+    /* Fonts */
+    --font-sans: Inter, sans-serif;
+    --font-serif: Georgia, serif;
+    --font-mono: "JetBrains Mono", monospace;
+    
+    /* Sidebar */
+    --sidebar-background: oklch(0.99 0.002 250);
+    --sidebar-foreground: oklch(0.5 0.01 250);
+    --sidebar-primary: oklch(0.6 0.2 30);
+    --sidebar-primary-foreground: oklch(1.0 0 0);
+    --sidebar-accent: oklch(0.95 0.005 250);
+    --sidebar-accent-foreground: oklch(0.2 0.01 250);
+    --sidebar-border: oklch(0.94 0.005 250);
+    --sidebar-ring: oklch(0.6 0.2 30 / 0.2);
+
+    /* Status Colors */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Jiu-Jitsu Belts */
+    --belt-white: #FFFFFF;
+    --belt-white-foreground: #000000;
+    --belt-blue: #0000FF;
+    --belt-purple: #800080;
+    --belt-brown: #654321;
+    --belt-black: #000000;
+    --belt-red: #FF0000;
+    --belt-stripe-bg: #000000;
+    --belt-stripe-red: #FF0000;
+  }
+
+  .dark {
+    --background: oklch(0.12 0.01 250);
+    --foreground: oklch(0.98 0.002 250);
+    --card: oklch(0.14 0.01 250);
+    --card-foreground: oklch(0.98 0.002 250);
+    --popover: oklch(0.14 0.01 250);
+    --popover-foreground: oklch(0.98 0.002 250);
+    --primary: oklch(0.7 0.18 35);
+    --primary-foreground: oklch(0.1 0.01 250);
+    --secondary: oklch(0.2 0.01 250);
+    --secondary-foreground: oklch(0.98 0.002 250);
+    --muted: oklch(0.18 0.01 250);
+    --muted-foreground: oklch(0.6 0.01 250);
+    --accent: oklch(0.2 0.01 250);
+    --accent-foreground: oklch(0.98 0.002 250);
+    --destructive: oklch(0.45 0.15 25);
+    --destructive-foreground: oklch(1.0 0 0);
+    --border: oklch(0.2 0.01 250);
+    --input: oklch(0.2 0.01 250);
+    --ring: oklch(0.98 0.002 250 / 0.15);
+
+    /* Sidebar Dark */
+    --sidebar-background: oklch(0.1 0.01 250);
+    --sidebar-foreground: oklch(0.6 0.01 250);
+    --sidebar-primary: oklch(0.7 0.18 35);
+    --sidebar-primary-foreground: oklch(0.1 0.01 250);
+    --sidebar-accent: oklch(0.18 0.01 250);
+    --sidebar-accent-foreground: oklch(0.98 0.002 250);
+    --sidebar-border: oklch(0.16 0.01 250);
+    --sidebar-ring: oklch(0.7 0.18 35 / 0.2);
+
+    /* Jiu-Jitsu Belts Dark */
+    --belt-white: #e5e5e5; 
+
+    /* Fonts Dark */
+    --font-sans: Inter, sans-serif;
+    --font-serif: Georgia, serif;
+    --font-mono: "JetBrains Mono", monospace;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    letter-spacing: -0.011em;
+  }
+}

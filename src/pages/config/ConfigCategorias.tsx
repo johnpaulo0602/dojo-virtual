@@ -9,37 +9,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, Tag, Search } from "lucide-react";
-
-interface Categoria {
-  id: string;
-  name: string;
-  type: "receita" | "despesa";
-  description: string;
-}
-
-const initialCategorias: Categoria[] = [
-  { id: "c1", name: "Doações", type: "receita", description: "Doações de pessoas físicas e jurídicas" },
-  { id: "c2", name: "Patrocínio", type: "receita", description: "Patrocínios de empresas parceiras" },
-  { id: "c3", name: "Eventos", type: "receita", description: "Receita de eventos e competições" },
-  { id: "c4", name: "Venda de Materiais", type: "receita", description: "Venda de kimonos e equipamentos" },
-  { id: "c5", name: "Material Esportivo", type: "despesa", description: "Compra de kimonos, faixas e equipamentos" },
-  { id: "c6", name: "Transporte", type: "despesa", description: "Transporte para competições e eventos" },
-  { id: "c7", name: "Alimentação", type: "despesa", description: "Lanches e refeições para alunos" },
-  { id: "c8", name: "Infraestrutura", type: "despesa", description: "Manutenção do espaço e equipamentos" },
-  { id: "c9", name: "Salários", type: "despesa", description: "Pagamento de instrutores e monitores" },
-];
+import { Plus, Pencil, Trash2, Tag, Search } from "lucide-react";
+import { useCategories, useSaveCategories } from "@/hooks/use-categories";
+import type { FinancialCategory } from "@/hooks/use-categories";
 
 export default function ConfigCategoriasPage() {
   const { setTitle } = usePageTitle();
   useEffect(() => { setTitle("Configurações › Categorias"); }, [setTitle]);
 
-  const [categorias, setCategorias] = useState<Categoria[]>(initialCategorias);
+  const { data: serverCategories = [], isLoading } = useCategories();
+  const saveCategories = useSaveCategories();
+
+  const [categorias, setCategorias] = useState<FinancialCategory[]>([]);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<"all" | "receita" | "despesa">("all");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Categoria | null>(null);
+  const [editing, setEditing] = useState<FinancialCategory | null>(null);
   const [form, setForm] = useState({ name: "", type: "receita" as "receita" | "despesa", description: "" });
+
+  useEffect(() => {
+    setCategorias(serverCategories);
+  }, [serverCategories]);
 
   const filtered = categorias
     .filter(c => filterType === "all" || c.type === filterType)
@@ -51,22 +41,43 @@ export default function ConfigCategoriasPage() {
     setDialogOpen(true);
   };
 
-  const openEdit = (cat: Categoria) => {
+  const openEdit = (cat: FinancialCategory) => {
     setEditing(cat);
     setForm({ name: cat.name, type: cat.type, description: cat.description });
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
-    if (!form.name.trim()) { toast({ title: "Erro", description: "Nome é obrigatório.", variant: "destructive" }); return; }
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      toast({ title: "Erro", description: "Nome é obrigatório.", variant: "destructive" });
+      return;
+    }
+    let updated: FinancialCategory[];
     if (editing) {
-      setCategorias(prev => prev.map(c => c.id === editing.id ? { ...c, ...form } : c));
-      toast({ title: "Categoria atualizada" });
+      updated = categorias.map(c => c.id === editing.id ? { ...c, ...form } : c);
     } else {
-      setCategorias(prev => [...prev, { id: `c${Date.now()}`, ...form }]);
-      toast({ title: "Categoria criada" });
+      updated = [...categorias, { id: `c${Date.now()}`, ...form }];
+    }
+    setCategorias(updated);
+    try {
+      await saveCategories.mutateAsync(updated);
+      toast({ title: editing ? "Categoria atualizada" : "Categoria criada" });
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível salvar as categorias.", variant: "destructive" });
     }
     setDialogOpen(false);
+  };
+
+  const handleDelete = async (cat: FinancialCategory) => {
+    if (!confirm(`Deseja excluir a categoria "${cat.name}"?`)) return;
+    const updated = categorias.filter(c => c.id !== cat.id);
+    setCategorias(updated);
+    try {
+      await saveCategories.mutateAsync(updated);
+      toast({ title: "Categoria excluída" });
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível excluir a categoria.", variant: "destructive" });
+    }
   };
 
   return (
@@ -96,35 +107,42 @@ export default function ConfigCategoriasPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead className="w-16" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map(cat => (
-                <TableRow key={cat.id}>
-                  <TableCell className="font-medium">{cat.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={cat.type === "receita" ? "default" : "secondary"}>
-                      {cat.type === "receita" ? "Receita" : "Despesa"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{cat.description}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(cat)}><Pencil className="h-4 w-4" /></Button>
-                  </TableCell>
+          {isLoading ? (
+            <p className="text-center text-muted-foreground py-8">Carregando...</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead className="w-24" />
                 </TableRow>
-              ))}
-              {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma categoria encontrada.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.map(cat => (
+                  <TableRow key={cat.id}>
+                    <TableCell className="font-medium">{cat.name}</TableCell>
+                    <TableCell>
+                      <Badge variant={cat.type === "receita" ? "default" : "secondary"}>
+                        {cat.type === "receita" ? "Receita" : "Despesa"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{cat.description}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(cat)}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(cat)} disabled={saveCategories.isPending}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma categoria encontrada.</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -149,7 +167,9 @@ export default function ConfigCategoriasPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editing ? "Salvar" : "Criar"}</Button>
+            <Button onClick={handleSave} disabled={saveCategories.isPending}>
+              {saveCategories.isPending ? "Salvando..." : editing ? "Salvar" : "Criar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

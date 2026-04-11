@@ -51,3 +51,41 @@ export function useCreateStudent() {
     },
   });
 }
+
+export function useCreateSchool() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { name: string; address: string }) => {
+      const { data } = await api.post("/api/v1/students/schools", payload);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schools"] });
+    },
+  });
+}
+
+export function useUpdateSchool() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: { id: string; name?: string; address?: string }) => {
+      const { data } = await api.patch(`/api/v1/students/schools/${id}`, payload);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schools"] });
+    },
+  });
+}
+
+export function useDeleteSchool() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/v1/students/schools/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schools"] });
+    },
+  });
+}

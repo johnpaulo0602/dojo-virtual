@@ -7,57 +7,68 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, School, Search } from "lucide-react";
-
-interface Escola {
-  id: string;
-  name: string;
-  address: string;
-  phone: string;
-  contactPerson: string;
-}
-
-const initialEscolas: Escola[] = [
-  { id: "e1", name: "EMEF Prof. João da Silva", address: "Rua das Flores, 123 - Centro", phone: "(11) 3000-1111", contactPerson: "Maria Santos" },
-  { id: "e2", name: "Escola Estadual São Paulo", address: "Av. Brasil, 456 - Jardim", phone: "(11) 3000-2222", contactPerson: "Carlos Oliveira" },
-  { id: "e3", name: "EMEF Criança Feliz", address: "Rua da Paz, 789 - Vila Nova", phone: "(11) 3000-3333", contactPerson: "Ana Costa" },
-];
+import { Plus, Pencil, Trash2, School, Search } from "lucide-react";
+import { useSchools, useCreateSchool, useUpdateSchool, useDeleteSchool } from "@/hooks/use-students";
+import type { School as SchoolType } from "@/hooks/use-students";
 
 export default function ConfigEscolasPage() {
   const { setTitle } = usePageTitle();
   useEffect(() => { setTitle("Configurações › Escolas"); }, [setTitle]);
 
-  const [escolas, setEscolas] = useState<Escola[]>(initialEscolas);
+  const { data: escolas = [], isLoading } = useSchools();
+  const createSchool = useCreateSchool();
+  const updateSchool = useUpdateSchool();
+  const deleteSchool = useDeleteSchool();
+
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Escola | null>(null);
-  const [form, setForm] = useState({ name: "", address: "", phone: "", contactPerson: "" });
+  const [editing, setEditing] = useState<SchoolType | null>(null);
+  const [form, setForm] = useState({ name: "", address: "" });
 
   const filtered = escolas.filter(e => e.name.toLowerCase().includes(search.toLowerCase()));
 
   const openNew = () => {
     setEditing(null);
-    setForm({ name: "", address: "", phone: "", contactPerson: "" });
+    setForm({ name: "", address: "" });
     setDialogOpen(true);
   };
 
-  const openEdit = (escola: Escola) => {
+  const openEdit = (escola: SchoolType) => {
     setEditing(escola);
-    setForm({ name: escola.name, address: escola.address, phone: escola.phone, contactPerson: escola.contactPerson });
+    setForm({ name: escola.name, address: escola.address || "" });
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
-    if (!form.name.trim()) { toast({ title: "Erro", description: "Nome é obrigatório.", variant: "destructive" }); return; }
-    if (editing) {
-      setEscolas(prev => prev.map(e => e.id === editing.id ? { ...e, ...form } : e));
-      toast({ title: "Escola atualizada" });
-    } else {
-      setEscolas(prev => [...prev, { id: `e${Date.now()}`, ...form }]);
-      toast({ title: "Escola criada" });
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      toast({ title: "Erro", description: "Nome é obrigatório.", variant: "destructive" });
+      return;
     }
-    setDialogOpen(false);
+    try {
+      if (editing) {
+        await updateSchool.mutateAsync({ id: editing.id, name: form.name, address: form.address });
+        toast({ title: "Escola atualizada" });
+      } else {
+        await createSchool.mutateAsync({ name: form.name, address: form.address });
+        toast({ title: "Escola criada" });
+      }
+      setDialogOpen(false);
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível salvar a escola.", variant: "destructive" });
+    }
   };
+
+  const handleDelete = async (escola: SchoolType) => {
+    if (!confirm(`Deseja excluir a escola "${escola.name}"?`)) return;
+    try {
+      await deleteSchool.mutateAsync(escola.id);
+      toast({ title: "Escola excluída" });
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível excluir a escola.", variant: "destructive" });
+    }
+  };
+
+  const isSaving = createSchool.isPending || updateSchool.isPending;
 
   return (
     <div className="space-y-6">
@@ -77,33 +88,36 @@ export default function ConfigEscolasPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Endereço</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Contato</TableHead>
-                <TableHead className="w-16" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map(escola => (
-                <TableRow key={escola.id}>
-                  <TableCell className="font-medium">{escola.name}</TableCell>
-                  <TableCell>{escola.address}</TableCell>
-                  <TableCell>{escola.phone}</TableCell>
-                  <TableCell>{escola.contactPerson}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(escola)}><Pencil className="h-4 w-4" /></Button>
-                  </TableCell>
+          {isLoading ? (
+            <p className="text-center text-muted-foreground py-8">Carregando...</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Endereço</TableHead>
+                  <TableHead className="w-24" />
                 </TableRow>
-              ))}
-              {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma escola encontrada.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.map(escola => (
+                  <TableRow key={escola.id}>
+                    <TableCell className="font-medium">{escola.name}</TableCell>
+                    <TableCell>{escola.address || "—"}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(escola)}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(escola)} disabled={deleteSchool.isPending}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">Nenhuma escola encontrada.</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -115,14 +129,10 @@ export default function ConfigEscolasPage() {
           <div className="space-y-4">
             <div className="space-y-2"><Label>Nome *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
             <div className="space-y-2"><Label>Endereço</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Telefone</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
-              <div className="space-y-2"><Label>Pessoa de Contato</Label><Input value={form.contactPerson} onChange={e => setForm(f => ({ ...f, contactPerson: e.target.value }))} /></div>
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editing ? "Salvar" : "Criar"}</Button>
+            <Button onClick={handleSave} disabled={isSaving}>{isSaving ? "Salvando..." : editing ? "Salvar" : "Criar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

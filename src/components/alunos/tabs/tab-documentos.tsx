@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Upload, Eye, Trash2, FileText, Plus, Loader2 } from "lucide-react";
+import { FileUpload } from "@/components/ui/file-upload";
+import { Eye, Trash2, FileText, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useStudentDocuments, useCreateStudentDocument, useDeleteStudentDocument } from "@/hooks/use-student-documents";
+import { api } from "@/lib/api";
 
 const docTypeLabels: Record<string, string> = {
   boletim: "Boletim Escolar",
@@ -30,24 +31,33 @@ export function TabDocumentos({ studentId }: Props) {
   const deleteDoc = useDeleteStudentDocument();
 
   const [uploadModal, setUploadModal] = useState(false);
-  const [docForm, setDocForm] = useState({ type: "", fileUrl: "" });
+  const [docType, setDocType] = useState("");
+  const [uploading, setUploading] = useState(false);
 
-  const handleUpload = async () => {
-    if (!docForm.type || !docForm.fileUrl) {
-      toast.error("Selecione o tipo e informe a URL do arquivo");
+  const uploadDocument = async (file: File) => {
+    if (!docType) {
+      toast.error("Selecione o tipo de documento antes de enviar o arquivo");
       return;
     }
+    setUploading(true);
     try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const { data } = await api.post(`/api/v1/students/${studentId}/upload`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       await createDoc.mutateAsync({
         studentId,
-        type: docForm.type,
-        fileUrl: docForm.fileUrl,
+        type: docType,
+        fileUrl: data.url,
       });
       toast.success("Documento adicionado!");
       setUploadModal(false);
-      setDocForm({ type: "", fileUrl: "" });
+      setDocType("");
     } catch {
       toast.error("Erro ao adicionar documento");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -143,7 +153,7 @@ export function TabDocumentos({ studentId }: Props) {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Tipo de Documento *</Label>
-              <Select value={docForm.type} onValueChange={(v) => setDocForm((f) => ({ ...f, type: v }))}>
+              <Select value={docType} onValueChange={setDocType}>
                 <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="boletim">Boletim Escolar</SelectItem>
@@ -156,26 +166,17 @@ export function TabDocumentos({ studentId }: Props) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>URL do Arquivo *</Label>
-              <div className="flex items-center gap-2">
-                <Upload className="h-4 w-4 text-muted-foreground shrink-0" />
-                <Input
-                  placeholder="https://..."
-                  value={docForm.fileUrl}
-                  onChange={(e) => setDocForm((f) => ({ ...f, fileUrl: e.target.value }))}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Upload real de arquivos será suportado em breve. Por ora, informe a URL do documento.
-              </p>
+              <Label>Arquivo *</Label>
+              <FileUpload
+                accept=".pdf,.jpg,.jpeg,.png"
+                maxSize={5 * 1024 * 1024}
+                onUpload={uploadDocument}
+                uploading={uploading}
+              />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setUploadModal(false)}>Cancelar</Button>
-            <Button onClick={handleUpload} disabled={createDoc.isPending}>
-              {createDoc.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Adicionar
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

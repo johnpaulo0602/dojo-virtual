@@ -176,26 +176,29 @@ export default function PerfilAlunoPage() {
         <TabsContent value="visao-geral">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm">Dados Pessoais</CardTitle>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={openEditPersonal}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
+              <CardHeader>
+                <CardTitle className="text-sm">Informações</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">CPF</span><span>{student.cpf}</span></div>
-                {student.gender && <div className="flex justify-between"><span className="text-muted-foreground">Gênero</span><span className="capitalize">{student.gender}</span></div>}
-                {student.birthDate && <div className="flex justify-between"><span className="text-muted-foreground">Nascimento</span><span>{new Date(student.birthDate).toLocaleDateString("pt-BR")}</span></div>}
-                {student.phone && <div className="flex justify-between"><span className="text-muted-foreground">Telefone</span><span>{student.phone}</span></div>}
-                {student.email && <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span>{student.email}</span></div>}
+                <div className="flex justify-between"><span className="text-muted-foreground">Matrícula</span><span>{student.matricula}</span></div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Status</span>
+                  <Badge variant={st.variant}>{st.label}</Badge>
+                </div>
+                {student.startDate && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">Data de início</span><span>{new Date(student.startDate).toLocaleDateString("pt-BR")}</span></div>
+                )}
+                {student.birthDate && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">Idade</span><span>{getAge(student.birthDate)} anos</span></div>
+                )}
+                {!isMinor && student.profession && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">Profissão</span><span>{student.profession}</span></div>
+                )}
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader>
                 <CardTitle className="text-sm">Jiu-Jitsu</CardTitle>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info("Edição de dados Jiu-Jitsu em breve")}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 {student.beltName && (
@@ -204,6 +207,19 @@ export default function PerfilAlunoPage() {
                     <BeltDisplay beltName={student.beltName} degree={student.beltDegree ?? 0} />
                   </div>
                 )}
+                {student.beltDegree !== undefined && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">Grau</span><span>{student.beltDegree}</span></div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total de graduações</span>
+                  <span>{student.promotions?.length || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Contribui?</span>
+                  <Badge variant={student.contributes ? "default" : "outline"}>
+                    {student.contributes ? "Sim" : "Não"}
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -211,8 +227,7 @@ export default function PerfilAlunoPage() {
 
         <TabsContent value="dados-pessoais">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm">Dados Pessoais</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-end">
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={openEditPersonal}>
                 <Pencil className="h-4 w-4" />
               </Button>

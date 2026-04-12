@@ -7,9 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { FileUpload } from "@/components/ui/file-upload";
 import { Upload, Eye, Download, Trash2, FileText, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import type { StudentDetail } from "@/types";
+import { useCreateStudentDocument } from "@/hooks/use-student-documents";
+import { api } from "@/lib/api";
 
 interface ReportCard {
   id: string;
@@ -54,6 +57,8 @@ export function TabEscolar({ student }: Props) {
   const [open, setOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [belowAverage, setBelowAverage] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const createDocument = useCreateStudentDocument();
 
   // School info edit
   const [editSchool, setEditSchool] = useState(false);
@@ -64,26 +69,43 @@ export function TabEscolar({ student }: Props) {
     schoolShift: schoolInfo?.schoolShift || "",
   });
 
-  const handleUpload = () => {
+  const uploadBoletim = async (file: File) => {
     if (!selectedMonth) {
-      toast.error("Selecione o mês de referência");
+      toast.error("Selecione o mês de referência antes de enviar o arquivo");
       return;
     }
-    const ml = months.find((m) => m.value === selectedMonth);
-    const newReport: ReportCard = {
-      id: `r${Date.now()}`,
-      month: selectedMonth,
-      monthLabel: ml?.label || "",
-      year: 2025,
-      belowAverage,
-      fileName: `boletim_${ml?.label.toLowerCase()}_2025.pdf`,
-      uploadedAt: new Date().toISOString().split("T")[0],
-    };
-    setReports((prev) => [...prev, newReport]);
-    setOpen(false);
-    setSelectedMonth("");
-    setBelowAverage(false);
-    toast.success("Boletim enviado com sucesso!");
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const { data } = await api.post(`/api/v1/students/${student.id}/upload`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      await createDocument.mutateAsync({
+        studentId: student.id,
+        type: "boletim",
+        fileUrl: data.url,
+      });
+      const ml = months.find((m) => m.value === selectedMonth);
+      const newReport: ReportCard = {
+        id: `r${Date.now()}`,
+        month: selectedMonth,
+        monthLabel: ml?.label || "",
+        year: new Date().getFullYear(),
+        belowAverage,
+        fileName: file.name,
+        uploadedAt: new Date().toISOString().split("T")[0],
+      };
+      setReports((prev) => [...prev, newReport]);
+      setOpen(false);
+      setSelectedMonth("");
+      setBelowAverage(false);
+      toast.success("Boletim enviado com sucesso!");
+    } catch {
+      toast.error("Erro ao enviar boletim");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -184,14 +206,6 @@ export function TabEscolar({ student }: Props) {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Arquivo</Label>
-              <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors">
-                <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">Clique ou arraste o arquivo aqui</p>
-                <p className="text-xs text-muted-foreground mt-1">PDF, JPG ou PNG até 10MB</p>
-              </div>
-            </div>
-            <div className="space-y-2">
               <Label>Mês de Referência</Label>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                 <SelectTrigger><SelectValue placeholder="Selecione o mês" /></SelectTrigger>
@@ -206,10 +220,18 @@ export function TabEscolar({ student }: Props) {
               <Label>Abaixo da média estabelecida?</Label>
               <Switch checked={belowAverage} onCheckedChange={setBelowAverage} />
             </div>
+            <div className="space-y-2">
+              <Label>Arquivo</Label>
+              <FileUpload
+                accept=".pdf,.jpg,.jpeg,.png"
+                maxSize={10 * 1024 * 1024}
+                onUpload={uploadBoletim}
+                uploading={uploading}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={handleUpload}>Enviar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

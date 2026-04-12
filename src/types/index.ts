@@ -5,6 +5,11 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  phone?: string;
+  beltName?: string;
+  beltDegree?: number;
+  specialties?: string;
+  status?: string;
   avatar?: string;
 }
 

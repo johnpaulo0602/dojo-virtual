@@ -5,7 +5,7 @@ export const personalDataSchema = z.object({
   cpf: z.string().min(14, "CPF inválido").max(14),
   birthDate: z.string().min(1, "Data de nascimento obrigatória"),
   gender: z.enum(["masculino", "feminino", "outro"], { required_error: "Selecione o gênero" }),
-  email: z.string().email("E-mail inválido").optional().or(z.literal("")),
+  email: z.string().min(1, "E-mail obrigatório").email("E-mail inválido"),
   phone: z.string().optional(),
   address: z.object({
     cep: z.string().min(1, "CEP obrigatório"),

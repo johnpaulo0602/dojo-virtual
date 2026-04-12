@@ -66,6 +66,29 @@ export function useUpdateStudent() {
   });
 }
 
+export function useMyStudent() {
+  return useQuery<StudentDetail>({
+    queryKey: ["students", "me"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/v1/students/me");
+      return data;
+    },
+  });
+}
+
+export function useUpdateMyProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { data } = await api.patch("/api/v1/students/me", payload);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["students", "me"] });
+    },
+  });
+}
+
 export function useCreateSchool() {
   const queryClient = useQueryClient();
   return useMutation({

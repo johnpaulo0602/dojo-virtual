@@ -31,7 +31,7 @@ const RelatoriosPage = lazy(() => import("./pages/financeiro/Relatorios"));
 const DoadoresPage = lazy(() => import("./pages/financeiro/Doadores"));
 const DoadorDetalhePage = lazy(() => import("./pages/financeiro/DoadorDetalhe"));
 const ConfiguracoesPage = lazy(() => import("./pages/Configuracoes"));
-const MeusAlunosPage = lazy(() => import("./pages/MeusAlunos"));
+const MeuPerfilPage = lazy(() => import("./pages/MeuPerfil"));
 const ContaPage = lazy(() => import("./pages/Conta"));
 const ConfigEscolasPage = lazy(() => import("./pages/config/ConfigEscolas"));
 const ConfigTurmasPage = lazy(() => import("./pages/config/ConfigTurmas"));
@@ -102,7 +102,7 @@ const App = () => (
                           <Route path="configuracoes/categorias" element={<ConfigCategoriasPage />} />
                           <Route path="configuracoes/equipe" element={<ConfigEquipePage />} />
                           <Route path="configuracoes/usuarios" element={<ConfigUsuariosPage />} />
-                          <Route path="meus-alunos" element={<MeusAlunosPage />} />
+                          <Route path="meu-perfil" element={<MeuPerfilPage />} />
                           <Route path="conta" element={<ContaPage />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>

@@ -120,9 +120,9 @@ export const navigationGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Meus Alunos",
+    label: "Meu Perfil",
     items: [
-      { title: "Meus Alunos", url: "/meus-alunos", icon: Users, roles: ["aluno"] },
+      { title: "Meu Perfil", url: "/meu-perfil", icon: Users, roles: ["aluno"] },
     ],
   },
 ];
@@ -164,5 +164,5 @@ export const routePermissions: Record<string, UserRole[]> = {
   "/configuracoes/categorias": ["admin"],
   "/configuracoes/equipe": ["admin"],
   "/configuracoes/usuarios": ["admin"],
-  "/meus-alunos": ["aluno"],
+  "/meu-perfil": ["aluno"],
 };

@@ -68,7 +68,7 @@ export default function NovoAlunoPage() {
         birthDate: formData.birthDate,
         gender: formData.gender,
         phone: formData.phone || undefined,
-        email: formData.email || undefined,
+        email: formData.email,
         address: {
           cep: formData.address.cep,
           street: formData.address.street,
@@ -90,8 +90,10 @@ export default function NovoAlunoPage() {
       } else {
         navigate("/alunos");
       }
-    } catch {
-      toast.error("Erro ao cadastrar aluno. Verifique os dados e tente novamente.");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail) ? detail.map((d: any) => d.msg).join("; ") : detail || "Erro ao cadastrar aluno.";
+      toast.error(msg);
     }
   };
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { useStudent } from "@/hooks/use-students";
+import { useStudent, useUpdateStudent } from "@/hooks/use-students";
+import { useCreateGuardian, useUpdateGuardian, useDeleteGuardian } from "@/hooks/use-guardians";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -57,6 +58,11 @@ export default function PerfilAlunoPage() {
   const navigate = useNavigate();
   const { data: student, isLoading, isError } = useStudent(id);
 
+  const updateStudent = useUpdateStudent();
+  const createGuardian = useCreateGuardian();
+  const updateGuardianMutation = useUpdateGuardian();
+  const deleteGuardianMutation = useDeleteGuardian();
+
   // Personal data edit
   const [editPersonal, setEditPersonal] = useState(false);
   const [personalForm, setPersonalForm] = useState({ name: "", cpf: "", phone: "", gender: "masculino" as string });
@@ -93,9 +99,14 @@ export default function PerfilAlunoPage() {
     setEditPersonal(true);
   };
 
-  const savePersonal = () => {
-    toast.success("Dados pessoais atualizados!");
-    setEditPersonal(false);
+  const savePersonal = async () => {
+    try {
+      await updateStudent.mutateAsync({ id: student!.id, ...personalForm });
+      toast.success("Dados pessoais atualizados!");
+      setEditPersonal(false);
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Erro ao atualizar dados");
+    }
   };
 
   const openAddGuardian = () => {
@@ -110,13 +121,35 @@ export default function PerfilAlunoPage() {
     setEditGuardian(true);
   };
 
-  const saveGuardian = () => {
-    toast.success(editingGuardianId ? "Responsável atualizado!" : "Responsável adicionado!");
-    setEditGuardian(false);
+  const saveGuardian = async () => {
+    try {
+      if (editingGuardianId) {
+        await updateGuardianMutation.mutateAsync({
+          studentId: student!.id,
+          guardianId: editingGuardianId,
+          ...guardianForm,
+        });
+        toast.success("Responsável atualizado!");
+      } else {
+        await createGuardian.mutateAsync({
+          studentId: student!.id,
+          ...guardianForm,
+        });
+        toast.success("Responsável adicionado!");
+      }
+      setEditGuardian(false);
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Erro ao salvar responsável");
+    }
   };
 
-  const deleteGuardian = (name: string) => {
-    toast.success(`${name} removido dos responsáveis`);
+  const deleteGuardian = async (id: string, name: string) => {
+    try {
+      await deleteGuardianMutation.mutateAsync({ studentId: student!.id, guardianId: id });
+      toast.success(`${name} removido dos responsáveis`);
+    } catch (error: any) {
+      toast.error("Erro ao remover responsável");
+    }
   };
 
   return (
@@ -273,7 +306,7 @@ export default function PerfilAlunoPage() {
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteGuardian(g.name)}>Remover</AlertDialogAction>
+                            <AlertDialogAction onClick={() => deleteGuardian(g.id, g.name)}>Remover</AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>

@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, BookOpen, Search } from "lucide-react";
 import { useClassGroups, useUpdateClassGroup } from "@/hooks/use-classes";
 import type { ClassGroup, ClassSchedule } from "@/types";
+import { cn } from "@/lib/utils";
 
 const WEEKDAYS = [
   { key: 1, label: "Seg" },
@@ -62,7 +63,7 @@ export default function ConfigAulasPage() {
   const [editing, setEditing] = useState<FlatSchedule | null>(null);
   const [form, setForm] = useState({
     turmaId: "",
-    dayOfWeek: "1",
+    weekdays: [] as number[],
     startTime: "14:00",
     endTime: "15:00",
   });
@@ -74,7 +75,7 @@ export default function ConfigAulasPage() {
 
   const openNew = () => {
     setEditing(null);
-    setForm({ turmaId: "", dayOfWeek: "1", startTime: "14:00", endTime: "15:00" });
+    setForm({ turmaId: "", weekdays: [], startTime: "14:00", endTime: "15:00" });
     setDialogOpen(true);
   };
 
@@ -82,7 +83,7 @@ export default function ConfigAulasPage() {
     setEditing(s);
     setForm({
       turmaId: s.groupId,
-      dayOfWeek: String(s.dayOfWeek),
+      weekdays: [s.dayOfWeek],
       startTime: s.startTime,
       endTime: s.endTime,
     });
@@ -94,37 +95,26 @@ export default function ConfigAulasPage() {
       toast({ title: "Erro", description: "Selecione uma turma.", variant: "destructive" });
       return;
     }
+    if (form.weekdays.length === 0) {
+      toast({ title: "Erro", description: "Selecione ao menos um dia.", variant: "destructive" });
+      return;
+    }
     const group = classGroups.find(g => g.id === form.turmaId);
     if (!group) return;
 
-    const newSchedule: ClassSchedule = {
-      dayOfWeek: Number(form.dayOfWeek),
+    const newSchedules: ClassSchedule[] = form.weekdays.map(day => ({
+      dayOfWeek: day,
       startTime: form.startTime,
       endTime: form.endTime,
-    };
+    }));
 
     let updatedSchedules: ClassSchedule[];
-    if (editing && editing.groupId === form.turmaId) {
-      // Edit in-place on the same group
-      updatedSchedules = (group.schedules || []).map((s, idx) =>
-        idx === editing.scheduleIndex ? newSchedule : s
-      );
+    if (editing) {
+      // Remove the old schedule, add new ones
+      updatedSchedules = (group.schedules || []).filter((_, idx) => idx !== editing.scheduleIndex);
+      updatedSchedules = [...updatedSchedules, ...newSchedules];
     } else {
-      // New schedule (or turma changed — add to target group)
-      updatedSchedules = [...(group.schedules || []), newSchedule];
-      // If turma changed during edit, also remove from old group
-      if (editing && editing.groupId !== form.turmaId) {
-        const oldGroup = classGroups.find(g => g.id === editing.groupId);
-        if (oldGroup) {
-          const oldSchedules = (oldGroup.schedules || []).filter((_, idx) => idx !== editing.scheduleIndex);
-          try {
-            await updateClassGroup.mutateAsync({ id: oldGroup.id, schedules: oldSchedules });
-          } catch {
-            toast({ title: "Erro", description: "Não foi possível remover da turma anterior.", variant: "destructive" });
-            return;
-          }
-        }
-      }
+      updatedSchedules = [...(group.schedules || []), ...newSchedules];
     }
 
     try {
@@ -132,7 +122,7 @@ export default function ConfigAulasPage() {
       toast({ title: editing ? "Aula atualizada" : "Aula criada" });
       setDialogOpen(false);
     } catch {
-      toast({ title: "Erro", description: "Não foi possível salvar a aula.", variant: "destructive" });
+      toast({ title: "Erro ao salvar", variant: "destructive" });
     }
   };
 
@@ -225,15 +215,29 @@ export default function ConfigAulasPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Dia da Semana *</Label>
-              <Select value={form.dayOfWeek} onValueChange={v => setForm(f => ({ ...f, dayOfWeek: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {WEEKDAYS.map(w => (
-                    <SelectItem key={w.key} value={String(w.key)}>{w.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Dias da Semana *</Label>
+              <div className="flex gap-2">
+                {WEEKDAYS.map(w => (
+                  <button
+                    key={w.key}
+                    type="button"
+                    onClick={() => setForm(f => ({
+                      ...f,
+                      weekdays: f.weekdays.includes(w.key)
+                        ? f.weekdays.filter(d => d !== w.key)
+                        : [...f.weekdays, w.key],
+                    }))}
+                    className={cn(
+                      "w-10 h-10 rounded-md border text-sm font-medium transition-colors",
+                      form.weekdays.includes(w.key)
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-muted-foreground border-border hover:bg-accent"
+                    )}
+                  >
+                    {w.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

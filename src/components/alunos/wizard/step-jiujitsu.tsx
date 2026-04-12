@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
+import { Link } from "react-router-dom";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,7 +16,7 @@ export function StepJiuJitsu() {
   const { watch, setValue, formState: { errors } } = useFormContext<JiuJitsuStep>();
   const beltName = watch("beltName") || "white_belt";
   const beltDegree = watch("beltDegree") || 0;
-  const classId = watch("classId");
+  const classGroupId = watch("classGroupId");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedBelt, setSelectedBelt] = useState(beltName);
   const [selectedDegree, setSelectedDegree] = useState(beltDegree);
@@ -42,24 +43,32 @@ export function StepJiuJitsu() {
           {errors.startDate && <p className="text-xs font-medium text-destructive">{errors.startDate.message}</p>}
         </div>
         <div className="space-y-2">
-          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/70">Turma *</Label>
-          <Select value={classId} onValueChange={(v) => setValue("classId", v)}>
-            <SelectTrigger className="h-10 rounded-xl">
-              <SelectValue placeholder="Selecione a turma" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              {classGroups.map((c) => {
-                const scheduleStr = (c.schedules ?? []).map(s => {
-                  const days = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-                  return `${days[s.dayOfWeek] ?? s.dayOfWeek} ${s.startTime}`;
-                }).join(", ");
-                return (
-                  <SelectItem key={c.id} value={c.id} className="rounded-lg">{c.name}{scheduleStr ? ` — ${scheduleStr}` : ""}</SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-          {errors.classId && <p className="text-xs font-medium text-destructive">{errors.classId.message}</p>}
+          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/70">Turma</Label>
+          {classGroups.length === 0 ? (
+            <p className="text-sm text-muted-foreground pt-2">
+              Nenhuma turma cadastrada.{" "}
+              <Link to="/configuracoes/turmas" className="underline text-primary hover:text-primary/80">
+                Cadastrar turma
+              </Link>
+            </p>
+          ) : (
+            <Select value={classGroupId || ""} onValueChange={(v) => setValue("classGroupId", v)}>
+              <SelectTrigger className="h-10 rounded-xl">
+                <SelectValue placeholder="Selecione a turma (opcional)" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {classGroups.map((c) => {
+                  const scheduleStr = (c.schedules ?? []).map(s => {
+                    const days = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+                    return `${days[s.dayOfWeek] ?? s.dayOfWeek} ${s.startTime}`;
+                  }).join(", ");
+                  return (
+                    <SelectItem key={c.id} value={c.id} className="rounded-lg">{c.name}{scheduleStr ? ` — ${scheduleStr}` : ""}</SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 

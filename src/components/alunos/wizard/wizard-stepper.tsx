@@ -3,9 +3,7 @@ import { Check } from "lucide-react";
 
 const steps = [
   { number: 1, label: "Dados Pessoais" },
-  { number: 2, label: "Responsáveis" },
-  { number: 3, label: "Escola" },
-  { number: 4, label: "Jiu-Jitsu" },
+  { number: 2, label: "Jiu-Jitsu" },
 ];
 
 interface WizardStepperProps {

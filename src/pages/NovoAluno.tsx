@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, FormProvider } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useCreateStudent } from "@/hooks/use-students";
 import { Button } from "@/components/ui/button";
@@ -9,13 +8,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { WizardStepper } from "@/components/alunos/wizard/wizard-stepper";
 import { StepPersonal } from "@/components/alunos/wizard/step-personal";
-import { StepGuardians } from "@/components/alunos/wizard/step-guardians";
-import { StepSchool } from "@/components/alunos/wizard/step-school";
 import { StepJiuJitsu } from "@/components/alunos/wizard/step-jiujitsu";
-import { personalDataSchema, guardiansStepSchema, schoolStepSchema, jiuJitsuStepSchema } from "@/schemas/student";
+import { personalDataSchema, jiuJitsuStepSchema } from "@/schemas/student";
 import { toast } from "sonner";
 
-const schemas = [personalDataSchema, guardiansStepSchema, schoolStepSchema, jiuJitsuStepSchema];
+const schemas = [personalDataSchema, jiuJitsuStepSchema];
 
 export default function NovoAlunoPage() {
   const { setTitle } = usePageTitle();
@@ -29,15 +26,14 @@ export default function NovoAlunoPage() {
     mode: "onTouched",
     defaultValues: {
       // Personal
-      name: "", cpf: "", rg: "", birthDate: "", gender: "" as any,
-      email: "", phone: "", cep: "", street: "", number: "",
-      complement: "", neighborhood: "", city: "", state: "",
-      // Guardians
-      guardians: [],
-      // School
-      schoolId: "", schoolLevel: "", schoolYear: "", schoolShift: "",
+      name: "", cpf: "", birthDate: "", gender: "" as any,
+      email: "", phone: "",
+      address: {
+        cep: "", street: "", number: "",
+        complement: "", neighborhood: "", city: "", state: "",
+      },
       // Jiu-Jitsu
-      startDate: "", classId: "", beltName: "white_belt", beltDegree: 0,
+      startDate: "", beltName: "white_belt", beltDegree: 0, classGroupId: "",
     },
   });
 
@@ -56,7 +52,7 @@ export default function NovoAlunoPage() {
 
   const next = async () => {
     const valid = await validateStep();
-    if (valid) setStep((s) => Math.min(s + 1, 4));
+    if (valid) setStep((s) => Math.min(s + 1, 2));
   };
 
   const prev = () => setStep((s) => Math.max(s - 1, 1));
@@ -66,9 +62,34 @@ export default function NovoAlunoPage() {
     if (!valid) return;
     try {
       const formData = methods.getValues();
-      await createStudent.mutateAsync(formData as Record<string, unknown>);
+      const payload = {
+        name: formData.name,
+        cpf: formData.cpf,
+        birthDate: formData.birthDate,
+        gender: formData.gender,
+        phone: formData.phone || undefined,
+        email: formData.email || undefined,
+        address: {
+          cep: formData.address.cep,
+          street: formData.address.street,
+          number: formData.address.number,
+          complement: formData.address.complement || undefined,
+          neighborhood: formData.address.neighborhood,
+          city: formData.address.city,
+          state: formData.address.state,
+        },
+        beltName: formData.beltName,
+        beltDegree: formData.beltDegree,
+        startDate: formData.startDate,
+        classGroupId: formData.classGroupId || undefined,
+      };
+      const result = await createStudent.mutateAsync(payload as Record<string, unknown>);
       toast.success("Aluno cadastrado com sucesso!", { description: "Redirecionando para a listagem..." });
-      navigate("/alunos");
+      if (result?.id) {
+        navigate(`/alunos/${result.id}`);
+      } else {
+        navigate("/alunos");
+      }
     } catch {
       toast.error("Erro ao cadastrar aluno. Verifique os dados e tente novamente.");
     }
@@ -95,15 +116,13 @@ export default function NovoAlunoPage() {
         <Card>
           <CardContent className="pt-6">
             {step === 1 && <StepPersonal />}
-            {step === 2 && <StepGuardians />}
-            {step === 3 && <StepSchool />}
-            {step === 4 && <StepJiuJitsu />}
+            {step === 2 && <StepJiuJitsu />}
           </CardContent>
         </Card>
 
         <div className="flex justify-between">
           <Button type="button" variant="outline" onClick={prev} disabled={step === 1}>Voltar</Button>
-          {step < 4 ? (
+          {step < 2 ? (
             <Button type="button" onClick={next}>Próximo</Button>
           ) : (
             <Button type="button" onClick={onSubmit} disabled={createStudent.isPending}>

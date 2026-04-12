@@ -14,9 +14,16 @@ function cepMask(v: string) {
   return v.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2").slice(0, 9);
 }
 
+const BRAZILIAN_STATES = [
+  "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO",
+  "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR",
+  "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
+];
+
 export function StepPersonal() {
   const { register, formState: { errors }, setValue, watch } = useFormContext<PersonalData>();
   const gender = watch("gender");
+  const state = watch("address.state");
 
   return (
     <div className="space-y-6">
@@ -31,10 +38,6 @@ export function StepPersonal() {
           <Input id="cpf" {...register("cpf")} placeholder="000.000.000-00"
             onChange={(e) => setValue("cpf", cpfMask(e.target.value))} />
           {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="rg">RG</Label>
-          <Input id="rg" {...register("rg")} placeholder="RG do aluno" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="birthDate">Data de nascimento *</Label>
@@ -65,36 +68,49 @@ export function StepPersonal() {
       </div>
 
       <div className="border-t pt-4">
-        <h3 className="text-sm font-medium text-foreground mb-4">Endereço</h3>
+        <h3 className="text-sm font-medium text-foreground mb-4">Endereço *</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="cep">CEP</Label>
-            <Input id="cep" {...register("cep")} placeholder="00000-000"
-              onChange={(e) => setValue("cep", cepMask(e.target.value))} />
+            <Label htmlFor="address.cep">CEP *</Label>
+            <Input id="address.cep" {...register("address.cep")} placeholder="00000-000"
+              onChange={(e) => setValue("address.cep", cepMask(e.target.value))} />
+            {errors.address?.cep && <p className="text-sm text-destructive">{errors.address.cep.message}</p>}
           </div>
           <div className="md:col-span-2 space-y-2">
-            <Label htmlFor="street">Rua</Label>
-            <Input id="street" {...register("street")} placeholder="Nome da rua" />
+            <Label htmlFor="address.street">Rua *</Label>
+            <Input id="address.street" {...register("address.street")} placeholder="Nome da rua" />
+            {errors.address?.street && <p className="text-sm text-destructive">{errors.address.street.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="number">Número</Label>
-            <Input id="number" {...register("number")} placeholder="Nº" />
+            <Label htmlFor="address.number">Número *</Label>
+            <Input id="address.number" {...register("address.number")} placeholder="Nº" />
+            {errors.address?.number && <p className="text-sm text-destructive">{errors.address.number.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="complement">Complemento</Label>
-            <Input id="complement" {...register("complement")} placeholder="Apto, bloco..." />
+            <Label htmlFor="address.complement">Complemento</Label>
+            <Input id="address.complement" {...register("address.complement")} placeholder="Apto, bloco..." />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="neighborhood">Bairro</Label>
-            <Input id="neighborhood" {...register("neighborhood")} />
+            <Label htmlFor="address.neighborhood">Bairro *</Label>
+            <Input id="address.neighborhood" {...register("address.neighborhood")} />
+            {errors.address?.neighborhood && <p className="text-sm text-destructive">{errors.address.neighborhood.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="city">Cidade</Label>
-            <Input id="city" {...register("city")} />
+            <Label htmlFor="address.city">Cidade *</Label>
+            <Input id="address.city" {...register("address.city")} />
+            {errors.address?.city && <p className="text-sm text-destructive">{errors.address.city.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="state">Estado</Label>
-            <Input id="state" {...register("state")} placeholder="SP" />
+            <Label>Estado *</Label>
+            <Select value={state || ""} onValueChange={(v) => setValue("address.state", v)}>
+              <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+              <SelectContent>
+                {BRAZILIAN_STATES.map((uf) => (
+                  <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.address?.state && <p className="text-sm text-destructive">{errors.address.state.message}</p>}
           </div>
         </div>
       </div>

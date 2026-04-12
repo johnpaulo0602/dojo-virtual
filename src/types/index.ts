@@ -33,6 +33,10 @@ export interface Student {
   email?: string;
   phone?: string;
   rg?: string;
+  profession?: string;
+  startDate?: string;
+  contributes?: boolean;
+  contributionAmount?: string;
 }
 
 export interface Guardian {
@@ -49,6 +53,7 @@ export interface Guardian {
 export interface SchoolInfo {
   id: string;
   schoolId: string;
+  isStudent: boolean;
   schoolLevel?: string;
   schoolYear?: string;
   schoolShift?: string;
@@ -60,15 +65,61 @@ export interface HealthProfile {
   medications?: string;
   conditions?: string;
   bloodType?: string;
-  emergencyContact?: string;
-  emergencyPhone?: string;
   observations?: string;
+  // emergency_contact and emergency_phone REMOVED
+}
+
+export interface EmergencyContact {
+  id: string;
+  name: string;
+  phone: string;
+  relationshipType: string;
+}
+
+export interface BeltPromotion {
+  id: string;
+  previousBelt: string;
+  previousDegree: number;
+  newBelt: string;
+  newDegree: number;
+  promotedBy: string;
+  date: string;
+  notes?: string;
+}
+
+export interface InstructorFeedback {
+  id: string;
+  authorId: string;
+  text: string;
+  date: string;
+}
+
+export interface StudentContribution {
+  id: string;
+  reference: string;
+  amount: string;
+  date: string;
+  method: string;
+  receiptUrl?: string;
+  status: string;
+}
+
+export interface StudentDocument {
+  id: string;
+  type: string;
+  fileUrl: string;
+  uploadedAt: string;
 }
 
 export interface StudentDetail extends Student {
+  address?: Record<string, string>;
   guardians: Guardian[];
   schoolInfo?: SchoolInfo;
   healthProfile?: HealthProfile;
+  emergencyContacts: EmergencyContact[];
+  promotions: BeltPromotion[];
+  contributions: StudentContribution[];
+  documents: StudentDocument[];
 }
 
 export interface ClassSchedule {

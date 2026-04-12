@@ -52,6 +52,20 @@ export function useCreateStudent() {
   });
 }
 
+export function useUpdateStudent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: { id: string } & Record<string, unknown>) => {
+      const { data } = await api.patch(`/api/v1/students/${id}`, payload);
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["students", variables.id] });
+    },
+  });
+}
+
 export function useCreateSchool() {
   const queryClient = useQueryClient();
   return useMutation({

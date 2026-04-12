@@ -15,6 +15,7 @@ import {
   TrendingUp,
   TrendingDown,
   BarChart3,
+  UserCog,
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole, QuickCreateAction } from "@/types";
@@ -113,6 +114,7 @@ export const navigationGroups: NavGroup[] = [
           { title: "Aulas", url: "/configuracoes/aulas", icon: BookOpen, roles: ["admin"] },
           { title: "Categorias", url: "/configuracoes/categorias", icon: Tag, roles: ["admin"] },
           { title: "Equipe Técnica", url: "/configuracoes/equipe", icon: GraduationCap, roles: ["admin"] },
+          { title: "Usuários", url: "/configuracoes/usuarios", icon: UserCog, roles: ["admin"] },
         ],
       },
     ],
@@ -164,5 +166,6 @@ export const routePermissions: Record<string, UserRole[]> = {
   "/configuracoes/aulas": ["admin"],
   "/configuracoes/categorias": ["admin"],
   "/configuracoes/equipe": ["admin"],
+  "/configuracoes/usuarios": ["admin"],
   "/meus-alunos": ["responsavel"],
 };

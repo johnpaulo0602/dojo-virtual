@@ -17,7 +17,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
@@ -104,12 +103,6 @@ export function LoginForm({
               </Button>
             </FieldGroup>
           </form>
-          <div className="mt-8 text-center text-sm font-medium text-muted-foreground">
-            Ainda não tem conta?{" "}
-            <Link to="/register" className="text-primary hover:underline hover:text-primary/80 transition-colors font-bold">
-              Cadastre-se
-            </Link>
-          </div>
         </CardContent>
       </Card>
       <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">

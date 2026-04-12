@@ -12,7 +12,6 @@ import { Loader2 } from "lucide-react";
 
 const NotFound = lazy(() => import("./pages/NotFound"));
 const LoginPage = lazy(() => import("./pages/auth/Login"));
-const RegisterPage = lazy(() => import("./pages/auth/Register"));
 const DashboardPage = lazy(() => import("./pages/Dashboard"));
 const AlunosPage = lazy(() => import("./pages/Alunos"));
 const NovoAlunoPage = lazy(() => import("./pages/NovoAluno"));
@@ -39,6 +38,7 @@ const ConfigTurmasPage = lazy(() => import("./pages/config/ConfigTurmas"));
 const ConfigAulasPage = lazy(() => import("./pages/config/ConfigAulas"));
 const ConfigCategoriasPage = lazy(() => import("./pages/config/ConfigCategorias"));
 const ConfigEquipePage = lazy(() => import("./pages/config/ConfigEquipe"));
+const ConfigUsuariosPage = lazy(() => import("./pages/config/ConfigUsuarios"));
 
 const queryClient = new QueryClient();
 
@@ -71,7 +71,6 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
                   <Route
                     path="/*"
                     element={
@@ -102,6 +101,7 @@ const App = () => (
                           <Route path="configuracoes/aulas" element={<ConfigAulasPage />} />
                           <Route path="configuracoes/categorias" element={<ConfigCategoriasPage />} />
                           <Route path="configuracoes/equipe" element={<ConfigEquipePage />} />
+                          <Route path="configuracoes/usuarios" element={<ConfigUsuariosPage />} />
                           <Route path="meus-alunos" element={<MeusAlunosPage />} />
                           <Route path="conta" element={<ContaPage />} />
                           <Route path="*" element={<NotFound />} />

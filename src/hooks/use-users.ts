@@ -50,3 +50,11 @@ export function useDeleteUser() {
     },
   });
 }
+
+export function useChangeUserPassword() {
+  return useMutation({
+    mutationFn: async ({ id, newPassword }: { id: string; newPassword: string }) => {
+      await api.put(`/api/v1/users/${id}/password`, { newPassword });
+    },
+  });
+}

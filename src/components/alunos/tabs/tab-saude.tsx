@@ -6,67 +6,57 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, HeartPulse } from "lucide-react";
+import { Pencil, HeartPulse } from "lucide-react";
 import { toast } from "sonner";
+import type { HealthProfile } from "@/types";
 
-interface HealthRecord {
-  id: string;
+const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
+interface Props {
+  healthProfile?: HealthProfile;
+}
+
+type HealthForm = {
   allergies: string;
   medications: string;
   conditions: string;
   bloodType: string;
-  emergencyContact: string;
-  emergencyPhone: string;
   observations: string;
-}
-
-const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-
-const emptyRecord: Omit<HealthRecord, "id"> = {
-  allergies: "", medications: "", conditions: "", bloodType: "", emergencyContact: "", emergencyPhone: "", observations: "",
 };
 
-export function TabSaude() {
-  const [record, setRecord] = useState<HealthRecord | null>(null);
+const emptyForm: HealthForm = {
+  allergies: "", medications: "", conditions: "", bloodType: "", observations: "",
+};
+
+export function TabSaude({ healthProfile }: Props) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<Omit<HealthRecord, "id">>(emptyRecord);
+  const [form, setForm] = useState<HealthForm>(
+    healthProfile
+      ? {
+          allergies: healthProfile.allergies || "",
+          medications: healthProfile.medications || "",
+          conditions: healthProfile.conditions || "",
+          bloodType: healthProfile.bloodType || "",
+          observations: healthProfile.observations || "",
+        }
+      : emptyForm
+  );
 
-  const openAdd = () => {
-    setForm(emptyRecord);
-    setOpen(true);
-  };
-
-  const openEdit = () => {
-    if (record) setForm({ allergies: record.allergies, medications: record.medications, conditions: record.conditions, bloodType: record.bloodType, emergencyContact: record.emergencyContact, emergencyPhone: record.emergencyPhone, observations: record.observations });
-    setOpen(true);
-  };
+  const update = (field: keyof HealthForm, value: string) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSave = () => {
-    if (record) {
-      setRecord({ ...record, ...form });
-      toast.success("Ficha de saúde atualizada!");
-    } else {
-      setRecord({ id: `h${Date.now()}`, ...form });
-      toast.success("Ficha de saúde adicionada!");
-    }
+    toast.success(healthProfile ? "Ficha de saúde atualizada!" : "Ficha de saúde adicionada!");
     setOpen(false);
   };
 
-  const handleDelete = () => {
-    setRecord(null);
-    toast.success("Ficha de saúde removida");
-  };
-
-  const update = (field: keyof Omit<HealthRecord, "id">, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
-
-  if (!record) {
+  if (!healthProfile) {
     return (
       <Card>
         <CardContent className="pt-6 flex flex-col items-center justify-center py-12 gap-4">
           <HeartPulse className="h-12 w-12 text-muted-foreground" />
           <p className="text-muted-foreground">Nenhuma ficha de saúde cadastrada.</p>
-          <Button onClick={openAdd}><Plus className="mr-2 h-4 w-4" /> Adicionar Ficha de Saúde</Button>
+          <Button onClick={() => setOpen(true)}>Adicionar Ficha de Saúde</Button>
 
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent className="max-w-lg">
@@ -88,33 +78,41 @@ export function TabSaude() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-sm">Ficha de Saúde</CardTitle>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={openEdit}><Pencil className="mr-2 h-4 w-4" /> Editar</Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" /> Excluir</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Excluir ficha de saúde?</AlertDialogTitle>
-                  <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+            <Pencil className="mr-2 h-4 w-4" /> Editar
+          </Button>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
-          {record.bloodType && <div className="flex justify-between"><span className="text-muted-foreground">Tipo Sanguíneo</span><span>{record.bloodType}</span></div>}
-          {record.allergies && <div className="flex justify-between"><span className="text-muted-foreground">Alergias</span><span>{record.allergies}</span></div>}
-          {record.medications && <div className="flex justify-between"><span className="text-muted-foreground">Medicamentos</span><span>{record.medications}</span></div>}
-          {record.conditions && <div className="flex justify-between"><span className="text-muted-foreground">Condições de Saúde</span><span>{record.conditions}</span></div>}
-          {record.emergencyContact && <div className="flex justify-between"><span className="text-muted-foreground">Contato de Emergência</span><span>{record.emergencyContact}</span></div>}
-          {record.emergencyPhone && <div className="flex justify-between"><span className="text-muted-foreground">Telefone de Emergência</span><span>{record.emergencyPhone}</span></div>}
-          {record.observations && <div className="flex justify-between"><span className="text-muted-foreground">Observações</span><span className="text-right max-w-xs">{record.observations}</span></div>}
+          {healthProfile.bloodType && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Tipo Sanguíneo</span>
+              <span>{healthProfile.bloodType}</span>
+            </div>
+          )}
+          {healthProfile.allergies && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Alergias</span>
+              <span>{healthProfile.allergies}</span>
+            </div>
+          )}
+          {healthProfile.medications && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Medicamentos</span>
+              <span>{healthProfile.medications}</span>
+            </div>
+          )}
+          {healthProfile.conditions && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Condições de Saúde</span>
+              <span>{healthProfile.conditions}</span>
+            </div>
+          )}
+          {healthProfile.observations && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Observações</span>
+              <span className="text-right max-w-xs">{healthProfile.observations}</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -132,7 +130,7 @@ export function TabSaude() {
   );
 }
 
-function HealthForm({ form, update }: { form: Omit<HealthRecord, "id">; update: (field: keyof Omit<HealthRecord, "id">, value: string) => void }) {
+function HealthForm({ form, update }: { form: HealthForm; update: (field: keyof HealthForm, value: string) => void }) {
   return (
     <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto">
       <div className="space-y-2">
@@ -153,16 +151,6 @@ function HealthForm({ form, update }: { form: Omit<HealthRecord, "id">; update: 
       <div className="space-y-2">
         <Label>Condições de Saúde</Label>
         <Input value={form.conditions} onChange={(e) => update("conditions", e.target.value)} placeholder="Ex: Asma, TDAH" />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Contato de Emergência</Label>
-          <Input value={form.emergencyContact} onChange={(e) => update("emergencyContact", e.target.value)} placeholder="Nome" />
-        </div>
-        <div className="space-y-2">
-          <Label>Telefone de Emergência</Label>
-          <Input value={form.emergencyPhone} onChange={(e) => update("emergencyPhone", e.target.value)} placeholder="(11) 99999-0000" />
-        </div>
       </div>
       <div className="space-y-2">
         <Label>Observações</Label>

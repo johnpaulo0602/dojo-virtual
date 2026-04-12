@@ -40,12 +40,17 @@ interface Props {
   student: StudentDetail;
 }
 
+function calcIsMinor(birthDate?: string) {
+  if (!birthDate) return true;
+  const age = new Date().getFullYear() - new Date(birthDate).getFullYear();
+  return age < 18;
+}
+
 export function TabEscolar({ student }: Props) {
   const schoolInfo = student.schoolInfo;
-  const [reports, setReports] = useState<ReportCard[]>([
-    { id: "r1", month: "03", monthLabel: "Março", year: 2025, belowAverage: false, fileName: "boletim_marco_2025.pdf", uploadedAt: "2025-04-02" },
-    { id: "r2", month: "04", monthLabel: "Abril", year: 2025, belowAverage: true, fileName: "boletim_abril_2025.pdf", uploadedAt: "2025-05-03" },
-  ]);
+  const defaultIsStudent = schoolInfo?.isStudent ?? calcIsMinor(student.birthDate);
+  const [isStudent, setIsStudent] = useState(defaultIsStudent);
+  const [reports, setReports] = useState<ReportCard[]>([]);
   const [open, setOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [belowAverage, setBelowAverage] = useState(false);
@@ -103,58 +108,73 @@ export function TabEscolar({ student }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* School info */}
+      {/* Is student toggle */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-sm">Informações Escolares</CardTitle>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={openEditSchool}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          {schoolInfo?.schoolLevel && <div className="flex justify-between"><span className="text-muted-foreground">Nível</span><span>{schoolInfo.schoolLevel}</span></div>}
-          {schoolInfo?.schoolYear && <div className="flex justify-between"><span className="text-muted-foreground">Ano/Série</span><span>{schoolInfo.schoolYear}</span></div>}
-          {schoolInfo?.schoolShift && <div className="flex justify-between"><span className="text-muted-foreground">Turno</span><span>{schoolInfo.schoolShift}</span></div>}
-          {!schoolInfo && <p className="text-muted-foreground">Sem informações escolares cadastradas.</p>}
+        <CardContent className="pt-4 pb-4 flex items-center justify-between">
+          <div>
+            <p className="font-medium text-sm">É estudante?</p>
+            <p className="text-xs text-muted-foreground">Ativa as informações escolares do aluno</p>
+          </div>
+          <Switch checked={isStudent} onCheckedChange={setIsStudent} />
         </CardContent>
       </Card>
 
-      {/* Report cards */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-sm">Boletins</CardTitle>
-          <Button size="sm" onClick={() => setOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" /> Enviar Boletim
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {reports.length === 0 ? (
-            <p className="text-muted-foreground text-center py-6">Nenhum boletim enviado ainda.</p>
-          ) : (
-            <div className="space-y-3">
-              {reports.map((r) => (
-                <div key={r.id} className="flex items-center justify-between border rounded-lg p-3">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">{r.monthLabel} / {r.year}</p>
-                      <p className="text-xs text-muted-foreground">{r.fileName}</p>
+      {/* School info — only shown when student */}
+      {isStudent && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-sm">Informações Escolares</CardTitle>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={openEditSchool}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {schoolInfo?.schoolLevel && <div className="flex justify-between"><span className="text-muted-foreground">Nível</span><span>{schoolInfo.schoolLevel}</span></div>}
+            {schoolInfo?.schoolYear && <div className="flex justify-between"><span className="text-muted-foreground">Ano/Série</span><span>{schoolInfo.schoolYear}</span></div>}
+            {schoolInfo?.schoolShift && <div className="flex justify-between"><span className="text-muted-foreground">Turno</span><span>{schoolInfo.schoolShift}</span></div>}
+            {!schoolInfo && <p className="text-muted-foreground">Sem informações escolares cadastradas.</p>}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Report cards — only shown when student */}
+      {isStudent && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-sm">Boletins</CardTitle>
+            <Button size="sm" onClick={() => setOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" /> Enviar Boletim
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {reports.length === 0 ? (
+              <p className="text-muted-foreground text-center py-6">Nenhum boletim enviado ainda.</p>
+            ) : (
+              <div className="space-y-3">
+                {reports.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between border rounded-lg p-3">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">{r.monthLabel} / {r.year}</p>
+                        <p className="text-xs text-muted-foreground">{r.fileName}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={r.belowAverage ? "destructive" : "default"}>
+                        {r.belowAverage ? "Abaixo da média" : "Acima da média"}
+                      </Badge>
+                      <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon"><Download className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={r.belowAverage ? "destructive" : "default"}>
-                      {r.belowAverage ? "Abaixo da média" : "Acima da média"}
-                    </Badge>
-                    <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon"><Download className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Upload modal */}
       <Dialog open={open} onOpenChange={setOpen}>

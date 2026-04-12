@@ -4,140 +4,178 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Upload, Eye, Download, RefreshCw, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Upload, Eye, Trash2, FileText, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useStudentDocuments, useCreateStudentDocument, useDeleteStudentDocument } from "@/hooks/use-student-documents";
 
-interface RequiredDoc {
-  key: string;
-  label: string;
+const docTypeLabels: Record<string, string> = {
+  boletim: "Boletim Escolar",
+  comprovante: "Comprovante de Residência",
+  cpf: "CPF",
+  identidade: "Identidade (RG)",
+  declaracao_matricula: "Declaração de Matrícula",
+  outro: "Outro",
+};
+
+interface Props {
+  studentId: string;
 }
 
-interface UploadedDoc {
-  key: string;
-  fileName: string;
-  uploadedAt: string;
-}
+export function TabDocumentos({ studentId }: Props) {
+  const { data: documents = [], isLoading } = useStudentDocuments(studentId);
+  const createDoc = useCreateStudentDocument();
+  const deleteDoc = useDeleteStudentDocument();
 
-const requiredDocs: RequiredDoc[] = [
-  { key: "cpf", label: "CPF" },
-  { key: "identidade", label: "Identidade (RG)" },
-  { key: "comprovante_residencia", label: "Comprovante de Residência" },
-  { key: "declaracao_matricula", label: "Declaração de Matrícula Escolar" },
-];
-
-export function TabDocumentos() {
-  const [uploaded, setUploaded] = useState<UploadedDoc[]>([
-    { key: "cpf", fileName: "cpf_lucas.pdf", uploadedAt: "2025-01-15" },
-    { key: "identidade", fileName: "rg_lucas.pdf", uploadedAt: "2025-01-15" },
-  ]);
   const [uploadModal, setUploadModal] = useState(false);
-  const [selectedDocKey, setSelectedDocKey] = useState<string | null>(null);
+  const [docForm, setDocForm] = useState({ type: "", fileUrl: "" });
 
-  const missingCount = requiredDocs.filter((d) => !uploaded.find((u) => u.key === d.key)).length;
-
-  const openUpload = (key: string) => {
-    setSelectedDocKey(key);
-    setUploadModal(true);
+  const handleUpload = async () => {
+    if (!docForm.type || !docForm.fileUrl) {
+      toast.error("Selecione o tipo e informe a URL do arquivo");
+      return;
+    }
+    try {
+      await createDoc.mutateAsync({
+        studentId,
+        type: docForm.type,
+        fileUrl: docForm.fileUrl,
+      });
+      toast.success("Documento adicionado!");
+      setUploadModal(false);
+      setDocForm({ type: "", fileUrl: "" });
+    } catch {
+      toast.error("Erro ao adicionar documento");
+    }
   };
 
-  const handleUpload = () => {
-    if (!selectedDocKey) return;
-    const doc = requiredDocs.find((d) => d.key === selectedDocKey);
-    const existing = uploaded.find((u) => u.key === selectedDocKey);
-    if (existing) {
-      setUploaded((prev) => prev.map((u) => u.key === selectedDocKey ? { ...u, fileName: `${selectedDocKey}_atualizado.pdf`, uploadedAt: new Date().toISOString().split("T")[0] } : u));
-      toast.success(`${doc?.label} atualizado!`);
-    } else {
-      setUploaded((prev) => [...prev, { key: selectedDocKey, fileName: `${selectedDocKey}_aluno.pdf`, uploadedAt: new Date().toISOString().split("T")[0] }]);
-      toast.success(`${doc?.label} enviado!`);
+  const handleDelete = async (docId: string) => {
+    try {
+      await deleteDoc.mutateAsync({ studentId, docId });
+      toast.success("Documento removido");
+    } catch {
+      toast.error("Erro ao remover documento");
     }
-    setUploadModal(false);
-    setSelectedDocKey(null);
   };
 
   return (
     <div className="space-y-4">
-      {missingCount > 0 && (
-        <Card className="border-yellow-500/50 bg-yellow-500/5">
-          <CardContent className="pt-4 pb-4 flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0" />
-            <p className="text-sm">
-              <span className="font-medium">{missingCount} documento(s) pendente(s).</span>{" "}
-              Envie os documentos obrigatórios para completar o cadastro do aluno.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Documentos Obrigatórios</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-sm">Documentos</CardTitle>
+          <Button size="sm" onClick={() => setUploadModal(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Adicionar Documento
+          </Button>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {requiredDocs.map((doc) => {
-              const file = uploaded.find((u) => u.key === doc.key);
-              const isUploaded = !!file;
-
-              return (
-                <div key={doc.key} className={`flex items-center justify-between border rounded-lg p-3 ${isUploaded ? "border-green-500/30 bg-green-500/5" : "border-yellow-500/30 bg-yellow-500/5"}`}>
+          {isLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : documents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-3">
+              <FileText className="h-10 w-10 text-muted-foreground" />
+              <p className="text-muted-foreground text-sm">Nenhum documento adicionado.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {documents.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-center justify-between border rounded-lg p-3"
+                >
                   <div className="flex items-center gap-3">
-                    {isUploaded ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                    ) : (
-                      <AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0" />
-                    )}
+                    <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
                     <div>
-                      <p className="text-sm font-medium">{doc.label}</p>
-                      {file ? (
-                        <p className="text-xs text-muted-foreground">{file.fileName} · Enviado em {new Date(file.uploadedAt).toLocaleDateString("pt-BR")}</p>
-                      ) : (
-                        <p className="text-xs text-yellow-600">Documento pendente</p>
-                      )}
+                      <p className="text-sm font-medium">{docTypeLabels[doc.type] ?? doc.type}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Enviado em {new Date(doc.uploadedAt).toLocaleDateString("pt-BR")}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    {isUploaded ? (
-                      <>
-                        <Button variant="ghost" size="icon" title="Visualizar"><Eye className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" title="Baixar"><Download className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" title="Alterar" onClick={() => openUpload(doc.key)}><RefreshCw className="h-4 w-4" /></Button>
-                      </>
-                    ) : (
-                      <Button size="sm" onClick={() => openUpload(doc.key)}>
-                        <Upload className="mr-2 h-4 w-4" /> Enviar
-                      </Button>
-                    )}
+                    <Badge variant="outline" className="text-xs mr-2">{doc.type}</Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Visualizar"
+                      onClick={() => window.open(doc.fileUrl, "_blank")}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" title="Excluir">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remover documento?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(doc.id)}>
+                            Remover
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Upload modal */}
+      {/* Add document modal */}
       <Dialog open={uploadModal} onOpenChange={setUploadModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {selectedDocKey && uploaded.find((u) => u.key === selectedDocKey) ? "Alterar" : "Enviar"}{" "}
-              {requiredDocs.find((d) => d.key === selectedDocKey)?.label}
-            </DialogTitle>
+            <DialogTitle>Adicionar Documento</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Arquivo</Label>
-              <div className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-muted/50 transition-colors">
-                <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">Clique ou arraste o arquivo aqui</p>
-                <p className="text-xs text-muted-foreground mt-1">PDF, JPG ou PNG até 10MB</p>
+              <Label>Tipo de Documento *</Label>
+              <Select value={docForm.type} onValueChange={(v) => setDocForm((f) => ({ ...f, type: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="boletim">Boletim Escolar</SelectItem>
+                  <SelectItem value="comprovante">Comprovante de Residência</SelectItem>
+                  <SelectItem value="cpf">CPF</SelectItem>
+                  <SelectItem value="identidade">Identidade (RG)</SelectItem>
+                  <SelectItem value="declaracao_matricula">Declaração de Matrícula</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>URL do Arquivo *</Label>
+              <div className="flex items-center gap-2">
+                <Upload className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Input
+                  placeholder="https://..."
+                  value={docForm.fileUrl}
+                  onChange={(e) => setDocForm((f) => ({ ...f, fileUrl: e.target.value }))}
+                />
               </div>
+              <p className="text-xs text-muted-foreground">
+                Upload real de arquivos será suportado em breve. Por ora, informe a URL do documento.
+              </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setUploadModal(false)}>Cancelar</Button>
-            <Button onClick={handleUpload}>Enviar</Button>
+            <Button onClick={handleUpload} disabled={createDoc.isPending}>
+              {createDoc.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Adicionar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

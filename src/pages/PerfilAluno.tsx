@@ -11,18 +11,15 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BeltDisplay } from "@/components/alunos/belt-display";
 import type { Guardian } from "@/types";
 import { TabEscolar } from "@/components/alunos/tabs/tab-escolar";
 import { TabSaude } from "@/components/alunos/tabs/tab-saude";
 import { TabEvolucao } from "@/components/alunos/tabs/tab-evolucao";
-import { TabFrequencia } from "@/components/alunos/tabs/tab-frequencia";
 import { TabDocumentos } from "@/components/alunos/tabs/tab-documentos";
 import { TabContribuicao } from "@/components/alunos/tabs/tab-contribuicao";
-import { belts } from "@/config/belts";
-import { ArrowLeft, Pencil, Plus, Award, MessageSquare, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -69,16 +66,6 @@ export default function PerfilAlunoPage() {
   const [guardianForm, setGuardianForm] = useState<Omit<Guardian, "id">>(emptyGuardian);
   const [editingGuardianId, setEditingGuardianId] = useState<string | null>(null);
 
-  // Graduation dialog
-  const [gradOpen, setGradOpen] = useState(false);
-  const [gradForm, setGradForm] = useState({ beltName: "", beltDegree: 0, date: new Date().toISOString().split("T")[0], notes: "" });
-
-  // Feedback dialog
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [feedbackForm, setFeedbackForm] = useState({ title: "", description: "", date: new Date().toISOString().split("T")[0] });
-
-  const selectedBelt = belts.find((b) => b.name === gradForm.beltName);
-  const degreeOptions = selectedBelt ? Array.from({ length: selectedBelt.degrees.quantity + 1 }, (_, i) => i) : [];
 
   useEffect(() => {
     setTitle(student ? student.name : isLoading ? "Carregando..." : "Aluno não encontrado");
@@ -96,6 +83,10 @@ export default function PerfilAlunoPage() {
   }
 
   const st = statusMap[student.status ?? ""] ?? { label: student.status ?? "—", variant: "outline" as const };
+
+  const isMinor = student.birthDate
+    ? new Date().getFullYear() - new Date(student.birthDate).getFullYear() < 18
+    : true;
 
   const openEditPersonal = () => {
     setPersonalForm({ name: student.name, cpf: student.cpf, phone: student.phone || "", gender: student.gender || "masculino" });
@@ -128,28 +119,6 @@ export default function PerfilAlunoPage() {
     toast.success(`${name} removido dos responsáveis`);
   };
 
-  const openGraduation = () => {
-    setGradForm({ beltName: student.beltName || "", beltDegree: student.beltDegree || 0, date: new Date().toISOString().split("T")[0], notes: "" });
-    setGradOpen(true);
-  };
-
-  const saveGraduation = () => {
-    if (!gradForm.beltName) { toast.error("Selecione a faixa"); return; }
-    toast.success(`Graduação registrada: ${belts.find((b) => b.name === gradForm.beltName)?.label} ${gradForm.beltDegree}º grau`);
-    setGradOpen(false);
-  };
-
-  const openFeedback = () => {
-    setFeedbackForm({ title: "", description: "", date: new Date().toISOString().split("T")[0] });
-    setFeedbackOpen(true);
-  };
-
-  const saveFeedback = () => {
-    if (!feedbackForm.title.trim()) { toast.error("Informe o título do feedback"); return; }
-    toast.success("Feedback registrado na timeline!");
-    setFeedbackOpen(false);
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -162,17 +131,9 @@ export default function PerfilAlunoPage() {
             <BreadcrumbItem><BreadcrumbPage>{student.name}</BreadcrumbPage></BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate("/alunos")}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
-          </Button>
-          <Button size="sm" onClick={openGraduation}>
-            <Award className="mr-2 h-4 w-4" /> Nova Graduação
-          </Button>
-          <Button size="sm" onClick={openFeedback}>
-            <MessageSquare className="mr-2 h-4 w-4" /> Novo Feedback
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={() => navigate("/alunos")}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+        </Button>
       </div>
 
       {/* Profile header */}
@@ -203,11 +164,11 @@ export default function PerfilAlunoPage() {
       <Tabs defaultValue="visao-geral">
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
-          <TabsTrigger value="responsaveis">Responsáveis</TabsTrigger>
+          <TabsTrigger value="dados-pessoais">Dados Pessoais</TabsTrigger>
+          {isMinor && <TabsTrigger value="responsaveis">Responsáveis</TabsTrigger>}
           <TabsTrigger value="escolar">Escolar</TabsTrigger>
           <TabsTrigger value="saude">Saúde</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução</TabsTrigger>
-          <TabsTrigger value="frequencia">Frequência</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="contribuicao">Contribuição</TabsTrigger>
         </TabsList>
@@ -248,7 +209,28 @@ export default function PerfilAlunoPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="responsaveis">
+        <TabsContent value="dados-pessoais">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-sm">Dados Pessoais</CardTitle>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={openEditPersonal}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-muted-foreground">Nome</span><span>{student.name}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">CPF</span><span>{student.cpf}</span></div>
+              {student.rg && <div className="flex justify-between"><span className="text-muted-foreground">RG</span><span>{student.rg}</span></div>}
+              {student.gender && <div className="flex justify-between"><span className="text-muted-foreground">Gênero</span><span className="capitalize">{student.gender}</span></div>}
+              {student.birthDate && <div className="flex justify-between"><span className="text-muted-foreground">Nascimento</span><span>{new Date(student.birthDate).toLocaleDateString("pt-BR")}</span></div>}
+              {student.phone && <div className="flex justify-between"><span className="text-muted-foreground">Telefone</span><span>{student.phone}</span></div>}
+              {student.email && <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span>{student.email}</span></div>}
+              {student.profession && <div className="flex justify-between"><span className="text-muted-foreground">Profissão</span><span>{student.profession}</span></div>}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {isMinor && <TabsContent value="responsaveis">
           <div className="space-y-3">
             {student.guardians.map((g) => (
               <Card key={g.id}>
@@ -296,26 +278,22 @@ export default function PerfilAlunoPage() {
               <Plus className="mr-2 h-4 w-4" /> Adicionar Responsável
             </Button>
           </div>
-        </TabsContent>
+        </TabsContent>}
 
         <TabsContent value="escolar">
           <TabEscolar student={student} />
         </TabsContent>
 
         <TabsContent value="saude">
-          <TabSaude />
+          <TabSaude healthProfile={student.healthProfile} />
         </TabsContent>
 
         <TabsContent value="evolucao">
-          <TabEvolucao student={student} />
-        </TabsContent>
-
-        <TabsContent value="frequencia">
-          <TabFrequencia student={student} />
+          <TabEvolucao studentId={student.id} />
         </TabsContent>
 
         <TabsContent value="documentos">
-          <TabDocumentos />
+          <TabDocumentos studentId={student.id} />
         </TabsContent>
 
         <TabsContent value="contribuicao">
@@ -405,81 +383,6 @@ export default function PerfilAlunoPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Graduation Dialog */}
-      <Dialog open={gradOpen} onOpenChange={setGradOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Nova Graduação</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Faixa</Label>
-              <Select value={gradForm.beltName} onValueChange={(v) => setGradForm((p) => ({ ...p, beltName: v, beltDegree: 0 }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione a faixa" /></SelectTrigger>
-                <SelectContent>
-                  {belts.map((b) => (
-                    <SelectItem key={b.name} value={b.name}>{b.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {gradForm.beltName && (
-              <div className="space-y-2">
-                <Label>Grau</Label>
-                <Select value={String(gradForm.beltDegree)} onValueChange={(v) => setGradForm((p) => ({ ...p, beltDegree: Number(v) }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {degreeOptions.map((d) => (
-                      <SelectItem key={d} value={String(d)}>{d}º grau</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {gradForm.beltName && (
-              <div className="flex items-center gap-2">
-                <Label className="text-muted-foreground">Preview:</Label>
-                <BeltDisplay beltName={gradForm.beltName} degree={gradForm.beltDegree} size="md" />
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label>Data da Graduação</Label>
-              <Input type="date" value={gradForm.date} onChange={(e) => setGradForm((p) => ({ ...p, date: e.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea value={gradForm.notes} onChange={(e) => setGradForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Observações sobre a graduação..." rows={3} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setGradOpen(false)}>Cancelar</Button>
-            <Button onClick={saveGraduation}>Registrar Graduação</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Feedback Dialog */}
-      <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Novo Feedback</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Título</Label>
-              <Input value={feedbackForm.title} onChange={(e) => setFeedbackForm((p) => ({ ...p, title: e.target.value }))} placeholder="Ex: Avaliação Trimestral" />
-            </div>
-            <div className="space-y-2">
-              <Label>Data</Label>
-              <Input type="date" value={feedbackForm.date} onChange={(e) => setFeedbackForm((p) => ({ ...p, date: e.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea value={feedbackForm.description} onChange={(e) => setFeedbackForm((p) => ({ ...p, description: e.target.value }))} placeholder="Observações sobre o aluno..." rows={3} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFeedbackOpen(false)}>Cancelar</Button>
-            <Button onClick={saveFeedback}>Registrar Feedback</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

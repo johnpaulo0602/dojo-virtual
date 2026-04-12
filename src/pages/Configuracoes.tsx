@@ -10,30 +10,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Settings, Bell, Shield, Instagram, Facebook, Twitter, Plus, Trash2, Users } from "lucide-react";
+import { useOrganization, useSaveOrganization } from "@/hooks/use-organization";
 
 export default function ConfiguracoesPage() {
   const { setTitle } = usePageTitle();
   useEffect(() => { setTitle("Configurações do Projeto"); }, [setTitle]);
 
-  const [projectName, setProjectName] = useState("Dojo Virtual");
-  const [projectEmail, setProjectEmail] = useState("contato@dojovirtual.org");
-  const [projectPhone, setProjectPhone] = useState("(11) 3000-0000");
-  const [projectAddress, setProjectAddress] = useState("Rua do Esporte, 100 - Centro, São Paulo - SP");
-  const [projectDescription, setProjectDescription] = useState("Dojo Virtual - Sistema de gestão de Jiu-Jitsu voltado para a modernização e organização da arte suave.");
-  const [cnpj, setCnpj] = useState("12.345.678/0001-90");
+  const { data: org, isLoading } = useOrganization();
+  const saveOrg = useSaveOrganization();
 
-  const [socials, setSocials] = useState([
-    { platform: "instagram", url: "@projetojjsocial" },
-    { platform: "facebook", url: "facebook.com/projetojjsocial" },
-  ]);
+  const [projectName, setProjectName] = useState("");
+  const [projectEmail, setProjectEmail] = useState("");
+  const [projectPhone, setProjectPhone] = useState("");
+  const [projectAddress, setProjectAddress] = useState("");
+  const [projectDescription, setProjectDescription] = useState("");
+  const [cnpj, setCnpj] = useState("");
+
+  const [socials, setSocials] = useState<{ platform: string; url: string }[]>([]);
   const addSocial = () => setSocials((prev) => [...prev, { platform: "", url: "" }]);
   const removeSocial = (i: number) => setSocials((prev) => prev.filter((_, idx) => idx !== i));
   const updateSocial = (i: number, field: "platform" | "url", value: string) =>
     setSocials((prev) => prev.map((s, idx) => (idx === i ? { ...s, [field]: value } : s)));
 
-  const [managers, setManagers] = useState([
-    { name: "Carlos Silva", phone: "(11) 99999-0001", email: "carlos@projeto.org" },
-  ]);
+  const [managers, setManagers] = useState<{ name: string; phone: string; email: string }[]>([]);
   const addManager = () => setManagers((prev) => [...prev, { name: "", phone: "", email: "" }]);
   const removeManager = (i: number) => setManagers((prev) => prev.filter((_, idx) => idx !== i));
   const updateManager = (i: number, field: "name" | "phone" | "email", value: string) =>
@@ -44,9 +43,48 @@ export default function ConfiguracoesPage() {
   const [attendanceThreshold, setAttendanceThreshold] = useState("75");
   const [defaultContribution, setDefaultContribution] = useState("50");
 
-  const handleSave = () => {
-    toast({ title: "Configurações salvas", description: "As alterações foram aplicadas com sucesso." });
+  // Sync local state from server data when it loads
+  useEffect(() => {
+    if (!org) return;
+    setProjectName(org.projectName ?? "");
+    setProjectEmail(org.email ?? "");
+    setProjectPhone(org.phone ?? "");
+    setProjectAddress(org.address ?? "");
+    setProjectDescription(org.description ?? "");
+    setCnpj(org.cnpj ?? "");
+    setSocials(org.socials ?? []);
+    setManagers(org.managers ?? []);
+    setDefaultBelt(org.defaultBelt ?? "white_belt");
+    setMaxStudentsPerClass(String(org.maxStudentsPerClass ?? "25"));
+    setAttendanceThreshold(String(org.attendanceThreshold ?? "75"));
+    setDefaultContribution(org.defaultContribution ?? "50");
+  }, [org]);
+
+  const handleSave = async () => {
+    try {
+      await saveOrg.mutateAsync({
+        projectName,
+        email: projectEmail,
+        phone: projectPhone,
+        address: projectAddress,
+        description: projectDescription,
+        cnpj,
+        socials,
+        managers,
+        defaultBelt,
+        maxStudentsPerClass: Number(maxStudentsPerClass),
+        attendanceThreshold: Number(attendanceThreshold),
+        defaultContribution,
+      });
+      toast({ title: "Configurações salvas", description: "As alterações foram aplicadas com sucesso." });
+    } catch {
+      toast({ title: "Erro ao salvar", description: "Não foi possível salvar as configurações.", variant: "destructive" });
+    }
   };
+
+  if (isLoading) {
+    return <div className="text-muted-foreground text-sm p-4">Carregando configurações...</div>;
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -185,7 +223,9 @@ export default function ConfiguracoesPage() {
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave}>Salvar Configurações</Button>
+        <Button onClick={handleSave} disabled={saveOrg.isPending}>
+          {saveOrg.isPending ? "Salvando..." : "Salvar Configurações"}
+        </Button>
       </div>
     </div>
   );

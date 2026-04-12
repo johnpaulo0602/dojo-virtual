@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { useUsers } from "@/hooks/use-users";
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from "@/hooks/use-users";
 import { useStudents } from "@/hooks/use-students";
 import type { User } from "@/types";
 
 type TeamMember = User & {
-  phone?: string;
-  beltName?: string;
-  beltDegree?: number;
   specialties: string[];
   classes: string[];
-  startDate?: string;
-  status: "ativo" | "inativo";
+  status: string;
 };
 import { BeltDisplay } from "@/components/alunos/belt-display";
 import { Input } from "@/components/ui/input";
@@ -45,19 +41,27 @@ import { toast } from "@/hooks/use-toast";
 
 const PAGE_SIZE = 10;
 
+function toTeamMember(u: User): TeamMember {
+  return {
+    ...u,
+    specialties: u.specialties ? u.specialties.split(",").map(s => s.trim()).filter(Boolean) : [],
+    classes: [],
+    status: u.status ?? "ativo",
+  };
+}
+
 export default function ConfigEquipePage() {
   const { setTitle } = usePageTitle();
   useEffect(() => { setTitle("Configurações · Equipe Técnica"); }, [setTitle]);
 
-  const { data: fetchedUsers = [] } = useUsers("instrutor,monitor");
+  const { data: fetchedUsers = [], isLoading } = useUsers("instrutor,monitor");
   const { data: fetchedStudents = [] } = useStudents();
-  const [localMembers, setLocalMembers] = useState<TeamMember[]>([]);
-  const members: TeamMember[] = localMembers.length > 0
-    ? localMembers
-    : fetchedUsers.map(u => ({ ...u, specialties: [], classes: [], status: "ativo" as const }));
-  const setMembers = (fn: (prev: TeamMember[]) => TeamMember[]) => {
-    setLocalMembers(fn(members));
-  };
+  const createUser = useCreateUser();
+  const updateUser = useUpdateUser();
+  const deleteUser = useDeleteUser();
+
+  const members: TeamMember[] = fetchedUsers.map(toTeamMember);
+
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -104,7 +108,6 @@ export default function ConfigEquipePage() {
     setSelectedStudentId("");
     setMonitorPhone("");
     setMonitorEmail("");
-    
   };
 
   const resetInstructorForm = () => {
@@ -116,74 +119,78 @@ export default function ConfigEquipePage() {
     setInstrSpecialties("");
   };
 
-  const handleAddMonitor = () => {
+  const handleAddMonitor = async () => {
     const student = fetchedStudents.find((s) => s.id === selectedStudentId);
     if (!student) return;
-    const newMember: TeamMember = {
-      id: `tm${Date.now()}`,
-      name: student.name,
-      email: monitorEmail,
-      phone: monitorPhone || student.phone || "",
-      role: "monitor",
-      beltName: student.beltName,
-      beltDegree: student.beltDegree,
-      specialties: [],
-      classes: [],
-      startDate: new Date().toISOString().split("T")[0],
-      status: "ativo",
-    };
-    setMembers((prev) => [...prev, newMember]);
-    toast({ title: "Monitor adicionado", description: `${student.name} foi promovido a Monitor.` });
-    resetMonitorForm();
-    setAddDialogOpen(false);
+    try {
+      await createUser.mutateAsync({
+        email: monitorEmail,
+        name: student.name,
+        password: "changeme",
+        role: "monitor",
+        phone: monitorPhone || student.phone || "",
+      });
+      toast({ title: "Monitor adicionado", description: `${student.name} foi promovido a Monitor.` });
+      resetMonitorForm();
+      setAddDialogOpen(false);
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível adicionar o monitor.", variant: "destructive" });
+    }
   };
 
-  const handleAddInstructor = () => {
+  const handleAddInstructor = async () => {
     if (!instrName.trim()) return;
-    const newMember: TeamMember = {
-      id: `tm${Date.now()}`,
-      name: instrName,
-      email: instrEmail,
-      phone: instrPhone,
-      role: "instrutor",
-      beltName: instrBelt,
-      beltDegree: Number(instrDegree),
-      specialties: instrSpecialties.split(",").map((s) => s.trim()).filter(Boolean),
-      classes: [],
-      startDate: new Date().toISOString().split("T")[0],
-      status: "ativo",
-    };
-    setMembers((prev) => [...prev, newMember]);
-    toast({ title: "Instrutor adicionado", description: `${instrName} foi cadastrado como Instrutor.` });
-    resetInstructorForm();
-    setAddDialogOpen(false);
+    try {
+      await createUser.mutateAsync({
+        email: instrEmail,
+        name: instrName,
+        password: "changeme",
+        role: "instrutor",
+        phone: instrPhone,
+        beltName: instrBelt,
+        beltDegree: Number(instrDegree),
+        specialties: instrSpecialties,
+      });
+      toast({ title: "Instrutor adicionado", description: `${instrName} foi cadastrado como Instrutor.` });
+      resetInstructorForm();
+      setAddDialogOpen(false);
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível cadastrar o instrutor.", variant: "destructive" });
+    }
   };
 
-  const handlePromoteToInstructor = () => {
+  const handlePromoteToInstructor = async () => {
     if (!promoteTarget) return;
-    setMembers((prev) =>
-      prev.map((m) => (m.id === promoteTarget.id ? { ...m, role: "instrutor" as const } : m))
-    );
-    toast({ title: "Promoção realizada", description: `${promoteTarget.name} agora é Instrutor.` });
-    setPromoteDialogOpen(false);
-    setPromoteTarget(null);
+    try {
+      await updateUser.mutateAsync({ id: promoteTarget.id, role: "instrutor" });
+      toast({ title: "Promoção realizada", description: `${promoteTarget.name} agora é Instrutor.` });
+      setPromoteDialogOpen(false);
+      setPromoteTarget(null);
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível promover o membro.", variant: "destructive" });
+    }
   };
 
-  const handleToggleStatus = (member: TeamMember) => {
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.id === member.id ? { ...m, status: m.status === "ativo" ? "inativo" as const : "ativo" as const } : m
-      )
-    );
-    toast({
-      title: member.status === "ativo" ? "Membro desativado" : "Membro reativado",
-      description: `${member.name} foi ${member.status === "ativo" ? "desativado" : "reativado"}.`,
-    });
+  const handleToggleStatus = async (member: TeamMember) => {
+    const newStatus = member.status === "ativo" ? "inativo" : "ativo";
+    try {
+      await updateUser.mutateAsync({ id: member.id, status: newStatus });
+      toast({
+        title: newStatus === "inativo" ? "Membro desativado" : "Membro reativado",
+        description: `${member.name} foi ${newStatus === "inativo" ? "desativado" : "reativado"}.`,
+      });
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível alterar o status.", variant: "destructive" });
+    }
   };
 
-  const handleRemove = (member: TeamMember) => {
-    setMembers((prev) => prev.filter((m) => m.id !== member.id));
-    toast({ title: "Membro removido", description: `${member.name} foi removido da equipe.` });
+  const handleRemove = async (member: TeamMember) => {
+    try {
+      await deleteUser.mutateAsync(member.id);
+      toast({ title: "Membro removido", description: `${member.name} foi removido da equipe.` });
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível remover o membro.", variant: "destructive" });
+    }
   };
 
   return (
@@ -293,7 +300,9 @@ export default function ConfigEquipePage() {
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleAddMonitor} disabled={!selectedStudentId}>Promover a Monitor</Button>
+                    <Button onClick={handleAddMonitor} disabled={!selectedStudentId || createUser.isPending}>
+                      Promover a Monitor
+                    </Button>
                   </DialogFooter>
                 </div>
               ) : (
@@ -336,7 +345,9 @@ export default function ConfigEquipePage() {
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleAddInstructor} disabled={!instrName.trim()}>Cadastrar Instrutor</Button>
+                    <Button onClick={handleAddInstructor} disabled={!instrName.trim() || createUser.isPending}>
+                      Cadastrar Instrutor
+                    </Button>
                   </DialogFooter>
                 </div>
               )}
@@ -360,7 +371,14 @@ export default function ConfigEquipePage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginated.length === 0 && (
+            {isLoading && (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  Carregando membros...
+                </TableCell>
+              </TableRow>
+            )}
+            {!isLoading && paginated.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   Nenhum membro encontrado.
@@ -449,7 +467,7 @@ export default function ConfigEquipePage() {
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPromoteDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handlePromoteToInstructor}>Confirmar Promoção</Button>
+            <Button onClick={handlePromoteToInstructor} disabled={updateUser.isPending}>Confirmar Promoção</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

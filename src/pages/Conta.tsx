@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { User, KeyRound, ShieldCheck, Bell } from "lucide-react";
+import { User, KeyRound, Bell } from "lucide-react";
 import type { UserRole } from "@/types";
+import { useUpdateProfile, useChangePassword } from "@/hooks/use-account";
+import { usePreferences, useSavePreferences } from "@/hooks/use-preferences";
 
 const roleLabels: Record<UserRole, string> = {
   admin: "Administrador",
@@ -25,11 +26,19 @@ export default function ContaPage() {
   const { setTitle } = usePageTitle();
   useEffect(() => { setTitle("Minha Conta"); }, [setTitle]);
 
-  const { user, setRole } = useAuth();
+  const { user } = useAuth();
+  const updateProfile = useUpdateProfile();
+  const changePassword = useChangePassword();
+  const { data: prefs } = usePreferences();
+  const savePrefs = useSavePreferences();
 
-  const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState(user.email);
-  const [phone, setPhone] = useState("(11) 99999-0000");
+  const [name, setName] = useState(user?.name ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [notifyNewStudent, setNotifyNewStudent] = useState(true);
   const [notifyAttendance, setNotifyAttendance] = useState(true);
@@ -37,14 +46,77 @@ export default function ContaPage() {
   const [notifyBeltPromotion, setNotifyBeltPromotion] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
     setName(user.name);
     setEmail(user.email);
+    setPhone(user.phone ?? "");
   }, [user]);
 
-  const initials = user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  // Sync notification toggles from server prefs
+  useEffect(() => {
+    if (!prefs) return;
+    setNotifyNewStudent(prefs.notifyNewStudent);
+    setNotifyAttendance(prefs.notifyAttendance);
+    setNotifyFinancial(prefs.notifyFinancial);
+    setNotifyBeltPromotion(prefs.notifyBeltPromotion);
+  }, [prefs]);
 
-  const handleSave = () => {
-    toast({ title: "Perfil atualizado", description: "Seus dados foram salvos com sucesso." });
+  const initials = (user?.name ?? "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+
+  const handleSaveProfile = async () => {
+    try {
+      await updateProfile.mutateAsync({ name, email, phone });
+      toast({ title: "Perfil atualizado", description: "Seus dados foram salvos com sucesso." });
+    } catch {
+      toast({ title: "Erro ao salvar", description: "Não foi possível salvar o perfil.", variant: "destructive" });
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Senhas não coincidem", description: "A nova senha e a confirmação devem ser iguais.", variant: "destructive" });
+      return;
+    }
+    try {
+      await changePassword.mutateAsync({ currentPassword, newPassword });
+      toast({ title: "Senha alterada", description: "Sua senha foi atualizada." });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch {
+      toast({ title: "Erro ao alterar senha", description: "Verifique a senha atual e tente novamente.", variant: "destructive" });
+    }
+  };
+
+  const handleNotifyToggle = async (
+    field: "notifyNewStudent" | "notifyAttendance" | "notifyFinancial" | "notifyBeltPromotion",
+    value: boolean
+  ) => {
+    const currentPrefs = {
+      notifyNewStudent,
+      notifyAttendance,
+      notifyFinancial,
+      notifyBeltPromotion,
+    };
+    // Optimistically update local state
+    switch (field) {
+      case "notifyNewStudent": setNotifyNewStudent(value); break;
+      case "notifyAttendance": setNotifyAttendance(value); break;
+      case "notifyFinancial": setNotifyFinancial(value); break;
+      case "notifyBeltPromotion": setNotifyBeltPromotion(value); break;
+    }
+    try {
+      await savePrefs.mutateAsync({ ...currentPrefs, [field]: value });
+    } catch {
+      // Revert on failure
+      switch (field) {
+        case "notifyNewStudent": setNotifyNewStudent(currentPrefs.notifyNewStudent); break;
+        case "notifyAttendance": setNotifyAttendance(currentPrefs.notifyAttendance); break;
+        case "notifyFinancial": setNotifyFinancial(currentPrefs.notifyFinancial); break;
+        case "notifyBeltPromotion": setNotifyBeltPromotion(currentPrefs.notifyBeltPromotion); break;
+      }
+      toast({ title: "Erro", description: "Não foi possível salvar a preferência.", variant: "destructive" });
+    }
   };
 
   return (
@@ -64,8 +136,8 @@ export default function ContaPage() {
               <AvatarFallback className="text-lg bg-primary/10 text-primary">{initials}</AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-lg font-semibold">{user.name}</p>
-              <Badge variant="secondary">{roleLabels[user.role]}</Badge>
+              <p className="text-lg font-semibold">{user?.name}</p>
+              {user && <Badge variant="secondary">{roleLabels[user.role]}</Badge>}
             </div>
           </div>
           <Separator />
@@ -84,7 +156,9 @@ export default function ContaPage() {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button onClick={handleSave}>Salvar Perfil</Button>
+            <Button onClick={handleSaveProfile} disabled={updateProfile.isPending}>
+              {updateProfile.isPending ? "Salvando..." : "Salvar Perfil"}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -101,21 +175,40 @@ export default function ContaPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Senha atual</Label>
-              <Input type="password" placeholder="••••••••" />
+              <Input
+                type="password"
+                placeholder="••••••••"
+                value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+              />
             </div>
             <div />
             <div className="space-y-2">
               <Label>Nova senha</Label>
-              <Input type="password" placeholder="••••••••" />
+              <Input
+                type="password"
+                placeholder="••••••••"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label>Confirmar nova senha</Label>
-              <Input type="password" placeholder="••••••••" />
+              <Input
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+              />
             </div>
           </div>
           <div className="flex justify-end">
-            <Button variant="outline" onClick={() => toast({ title: "Senha alterada", description: "Sua senha foi atualizada." })}>
-              Alterar Senha
+            <Button
+              variant="outline"
+              onClick={handleChangePassword}
+              disabled={changePassword.isPending || !currentPassword || !newPassword || !confirmPassword}
+            >
+              {changePassword.isPending ? "Alterando..." : "Alterar Senha"}
             </Button>
           </div>
         </CardContent>
@@ -132,44 +225,42 @@ export default function ContaPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {[
-            { label: "Novo aluno cadastrado", desc: "Receber notificação quando um novo aluno for matriculado", value: notifyNewStudent, set: setNotifyNewStudent },
-            { label: "Relatório de presença", desc: "Alerta diário de presença das aulas", value: notifyAttendance, set: setNotifyAttendance },
-            { label: "Movimentações financeiras", desc: "Alertas de receitas e despesas registradas", value: notifyFinancial, set: setNotifyFinancial },
-            { label: "Promoção de faixa", desc: "Notificar quando um aluno for graduado", value: notifyBeltPromotion, set: setNotifyBeltPromotion },
-          ].map((item, i) => (
-            <div key={i} className="flex items-center justify-between">
+            {
+              label: "Novo aluno cadastrado",
+              desc: "Receber notificação quando um novo aluno for matriculado",
+              value: notifyNewStudent,
+              field: "notifyNewStudent" as const,
+            },
+            {
+              label: "Relatório de presença",
+              desc: "Alerta diário de presença das aulas",
+              value: notifyAttendance,
+              field: "notifyAttendance" as const,
+            },
+            {
+              label: "Movimentações financeiras",
+              desc: "Alertas de receitas e despesas registradas",
+              value: notifyFinancial,
+              field: "notifyFinancial" as const,
+            },
+            {
+              label: "Promoção de faixa",
+              desc: "Notificar quando um aluno for graduado",
+              value: notifyBeltPromotion,
+              field: "notifyBeltPromotion" as const,
+            },
+          ].map((item) => (
+            <div key={item.field} className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">{item.label}</p>
                 <p className="text-xs text-muted-foreground">{item.desc}</p>
               </div>
-              <Switch checked={item.value} onCheckedChange={item.set} />
+              <Switch
+                checked={item.value}
+                onCheckedChange={(v) => handleNotifyToggle(item.field, v)}
+              />
             </div>
           ))}
-        </CardContent>
-      </Card>
-
-      {/* Role Switcher (dev tool) */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-            <CardTitle>Trocar Perfil</CardTitle>
-          </div>
-          <CardDescription>Ferramenta de desenvolvimento — simular diferentes papéis</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Select value={user.role} onValueChange={(v) => setRole(v as UserRole)}>
-              <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Administrador</SelectItem>
-                <SelectItem value="instrutor">Instrutor</SelectItem>
-                <SelectItem value="monitor">Monitor</SelectItem>
-                <SelectItem value="responsavel">Responsável</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">Troque para visualizar o sistema como outro perfil</p>
-          </div>
         </CardContent>
       </Card>
     </div>

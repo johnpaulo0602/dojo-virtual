@@ -19,7 +19,7 @@ const roleLabels: Record<UserRole, string> = {
   admin: "Administrador",
   instrutor: "Instrutor",
   monitor: "Monitor",
-  responsavel: "Responsável",
+  aluno: "Aluno",
 };
 
 export default function ContaPage() {

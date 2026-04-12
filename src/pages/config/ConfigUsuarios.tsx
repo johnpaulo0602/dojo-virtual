@@ -35,14 +35,14 @@ const roleLabels: Record<UserRole, string> = {
   admin: "Administrador",
   instrutor: "Instrutor",
   monitor: "Monitor",
-  responsavel: "Responsável",
+  aluno: "Aluno",
 };
 
 const roleBadgeVariant: Record<UserRole, "default" | "secondary" | "outline"> = {
   admin: "default",
   instrutor: "secondary",
   monitor: "outline",
-  responsavel: "outline",
+  aluno: "outline",
 };
 
 export default function ConfigUsuariosPage() {
@@ -105,8 +105,10 @@ export default function ConfigUsuariosPage() {
       toast({ title: "Usuário criado", description: `${createForm.name} foi cadastrado com sucesso.` });
       setCreateForm({ name: "", email: "", password: "", role: "monitor" });
       setCreateOpen(false);
-    } catch {
-      toast({ title: "Erro", description: "Não foi possível criar o usuário.", variant: "destructive" });
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail) ? detail.map((d: any) => d.msg).join("; ") : detail || "Não foi possível criar o usuário.";
+      toast({ title: "Erro", description: msg, variant: "destructive" });
     }
   };
 
@@ -123,8 +125,10 @@ export default function ConfigUsuariosPage() {
       toast({ title: "Usuário atualizado", description: `${editForm.name} foi atualizado.` });
       setEditOpen(false);
       setEditTarget(null);
-    } catch {
-      toast({ title: "Erro", description: "Não foi possível atualizar o usuário.", variant: "destructive" });
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail) ? detail.map((d: any) => d.msg).join("; ") : detail || "Não foi possível atualizar o usuário.";
+      toast({ title: "Erro", description: msg, variant: "destructive" });
     }
   };
 
@@ -141,8 +145,10 @@ export default function ConfigUsuariosPage() {
       toast({ title: "Senha alterada", description: `Senha de ${passwordTarget.name} foi atualizada.` });
       setPasswordOpen(false);
       setPasswordTarget(null);
-    } catch {
-      toast({ title: "Erro", description: "Não foi possível alterar a senha.", variant: "destructive" });
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail) ? detail.map((d: any) => d.msg).join("; ") : detail || "Não foi possível alterar a senha.";
+      toast({ title: "Erro", description: msg, variant: "destructive" });
     }
   };
 
@@ -154,8 +160,10 @@ export default function ConfigUsuariosPage() {
         title: newStatus === "inativo" ? "Usuário desativado" : "Usuário reativado",
         description: `${user.name} foi ${newStatus === "inativo" ? "desativado" : "reativado"}.`,
       });
-    } catch {
-      toast({ title: "Erro", description: "Não foi possível alterar o status.", variant: "destructive" });
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail) ? detail.map((d: any) => d.msg).join("; ") : detail || "Não foi possível alterar o status.";
+      toast({ title: "Erro", description: msg, variant: "destructive" });
     }
   };
 
@@ -166,8 +174,10 @@ export default function ConfigUsuariosPage() {
       toast({ title: "Usuário excluído", description: `${deleteTarget.name} foi removido.` });
       setDeleteOpen(false);
       setDeleteTarget(null);
-    } catch {
-      toast({ title: "Erro", description: "Não foi possível excluir o usuário.", variant: "destructive" });
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail) ? detail.map((d: any) => d.msg).join("; ") : detail || "Não foi possível excluir o usuário.";
+      toast({ title: "Erro", description: msg, variant: "destructive" });
     }
   };
 
@@ -193,7 +203,7 @@ export default function ConfigUsuariosPage() {
             <SelectItem value="admin">Administrador</SelectItem>
             <SelectItem value="instrutor">Instrutor</SelectItem>
             <SelectItem value="monitor">Monitor</SelectItem>
-            <SelectItem value="responsavel">Responsável</SelectItem>
+            <SelectItem value="aluno">Aluno</SelectItem>
           </SelectContent>
         </Select>
         <Button onClick={() => setCreateOpen(true)}>
@@ -320,7 +330,7 @@ export default function ConfigUsuariosPage() {
                   <SelectItem value="admin">Administrador</SelectItem>
                   <SelectItem value="instrutor">Instrutor</SelectItem>
                   <SelectItem value="monitor">Monitor</SelectItem>
-                  <SelectItem value="responsavel">Responsável</SelectItem>
+                  <SelectItem value="aluno">Aluno</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -360,7 +370,7 @@ export default function ConfigUsuariosPage() {
                   <SelectItem value="admin">Administrador</SelectItem>
                   <SelectItem value="instrutor">Instrutor</SelectItem>
                   <SelectItem value="monitor">Monitor</SelectItem>
-                  <SelectItem value="responsavel">Responsável</SelectItem>
+                  <SelectItem value="aluno">Aluno</SelectItem>
                 </SelectContent>
               </Select>
             </div>

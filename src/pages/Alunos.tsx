@@ -7,6 +7,7 @@ import { UserPlus } from "lucide-react";
 import { StudentFilters } from "@/components/alunos/student-filters";
 import { StudentsTable } from "@/components/alunos/students-table";
 import { useStudents } from "@/hooks/use-students";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AlunosPage() {
   const { setTitle } = usePageTitle();
@@ -18,6 +19,8 @@ export default function AlunosPage() {
   const [belt, setBelt] = useState("all");
   
   const { data: students = [], isLoading } = useStudents();
+  const { user } = useAuth();
+  const canCreate = user?.role === "admin" || user?.role === "instrutor";
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
@@ -39,10 +42,12 @@ export default function AlunosPage() {
             <BreadcrumbItem><BreadcrumbPage>Alunos</BreadcrumbPage></BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <Button onClick={() => navigate("/alunos/novo")}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Novo Aluno
-        </Button>
+        {canCreate && (
+          <Button onClick={() => navigate("/alunos/novo")}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Novo Aluno
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col gap-4">

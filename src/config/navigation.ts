@@ -38,7 +38,7 @@ export const navigationGroups: NavGroup[] = [
   {
     label: "Principal",
     items: [
-      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["admin", "instrutor", "monitor", "responsavel"] },
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["admin", "instrutor", "monitor", "aluno"] },
     ],
   },
   {
@@ -122,7 +122,7 @@ export const navigationGroups: NavGroup[] = [
   {
     label: "Meus Alunos",
     items: [
-      { title: "Meus Alunos", url: "/meus-alunos", icon: Users, roles: ["responsavel"] },
+      { title: "Meus Alunos", url: "/meus-alunos", icon: Users, roles: ["aluno"] },
     ],
   },
 ];
@@ -138,20 +138,17 @@ export const quickCreateActions: Record<UserRole, QuickCreateAction[]> = {
     { id: "novo_aluno", label: "Novo Aluno", icon: "UserPlus", route: "/alunos/novo" },
     { id: "nova_aula", label: "Nova Aula", icon: "Calendar", route: "/aulas" },
   ],
-  monitor: [
-    { id: "registrar_presenca", label: "Registrar Presença", icon: "ClipboardCheck", route: "/check-in" },
-  ],
-  responsavel: [],
+  monitor: [],
+  aluno: [],
 };
 
 export const routePermissions: Record<string, UserRole[]> = {
-  "/dashboard": ["admin", "instrutor", "monitor", "responsavel"],
+  "/dashboard": ["admin", "instrutor", "monitor", "aluno"],
   "/alunos": ["admin", "instrutor", "monitor"],
   "/alunos/novo": ["admin", "instrutor"],
   "/turmas": ["admin", "instrutor", "monitor"],
   "/aulas": ["admin", "instrutor", "monitor"],
   "/presencas": ["admin", "instrutor", "monitor"],
-  "/check-in": ["admin", "instrutor", "monitor"],
   "/equipe-tecnica": ["admin"],
   "/escolas": ["admin", "instrutor"],
   "/jiu-jitsu/faixas-graus": ["admin"],
@@ -167,5 +164,5 @@ export const routePermissions: Record<string, UserRole[]> = {
   "/configuracoes/categorias": ["admin"],
   "/configuracoes/equipe": ["admin"],
   "/configuracoes/usuarios": ["admin"],
-  "/meus-alunos": ["responsavel"],
+  "/meus-alunos": ["aluno"],
 };

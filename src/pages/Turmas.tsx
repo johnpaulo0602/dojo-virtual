@@ -6,6 +6,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Plus } from "lucide-react";
 import { ClassGroupsTable } from "@/components/turmas/class-groups-table";
 import { useClassGroups } from "@/hooks/use-classes";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function TurmasPage() {
   const { setTitle } = usePageTitle();
@@ -13,6 +14,8 @@ export default function TurmasPage() {
   useEffect(() => { setTitle("Turmas"); }, [setTitle]);
   
   const { data: classGroups = [], isLoading } = useClassGroups();
+  const { user } = useAuth();
+  const canCreate = user?.role === "admin" || user?.role === "instrutor";
 
   return (
     <div className="space-y-6">
@@ -24,10 +27,12 @@ export default function TurmasPage() {
             <BreadcrumbItem><BreadcrumbPage>Turmas</BreadcrumbPage></BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <Button onClick={() => navigate("/turmas/nova")}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Turma
-        </Button>
+        {canCreate && (
+          <Button onClick={() => navigate("/turmas/nova")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Turma
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col gap-4">

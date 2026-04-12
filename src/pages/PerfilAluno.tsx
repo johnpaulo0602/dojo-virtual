@@ -22,6 +22,7 @@ import { TabDocumentos } from "@/components/alunos/tabs/tab-documentos";
 import { TabContribuicao } from "@/components/alunos/tabs/tab-contribuicao";
 import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const statusMap: Record<string, { label: string; variant: "default" | "destructive" | "outline" }> = {
@@ -57,6 +58,7 @@ export default function PerfilAlunoPage() {
   const { setTitle } = usePageTitle();
   const navigate = useNavigate();
   const { data: student, isLoading, isError } = useStudent(id);
+  const { user } = useAuth();
 
   const updateStudent = useUpdateStudent();
   const createGuardian = useCreateGuardian();
@@ -337,7 +339,7 @@ export default function PerfilAlunoPage() {
         </TabsContent>
 
         <TabsContent value="evolucao">
-          <TabEvolucao studentId={student.id} />
+          <TabEvolucao studentId={student.id} currentBelt={student.beltName} currentDegree={student.beltDegree} promotedByName={user?.name || ""} />
         </TabsContent>
 
         <TabsContent value="documentos">

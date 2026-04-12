@@ -16,9 +16,12 @@ import { belts } from "@/config/belts";
 
 interface Props {
   studentId: string;
+  currentBelt?: string;
+  currentDegree?: number;
+  promotedByName?: string;
 }
 
-export function TabEvolucao({ studentId }: Props) {
+export function TabEvolucao({ studentId, currentBelt = "branca", currentDegree = 0, promotedByName = "" }: Props) {
   const { data: promotions = [], isLoading: loadingPromotions } = usePromotions(studentId);
   const { data: feedbacks = [], isLoading: loadingFeedbacks } = useFeedbacks(studentId);
   const createPromotion = useCreatePromotion();
@@ -53,8 +56,11 @@ export function TabEvolucao({ studentId }: Props) {
     try {
       await createPromotion.mutateAsync({
         studentId,
+        previousBelt: currentBelt,
+        previousDegree: currentDegree,
         newBelt: gradForm.beltName,
         newDegree: gradForm.beltDegree,
+        promotedBy: promotedByName,
         date: gradForm.date,
         notes: gradForm.notes || undefined,
       });

@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 
 const NotFound = lazy(() => import("./pages/NotFound"));
 const LoginPage = lazy(() => import("./pages/auth/Login"));
+const PrimeiroAcessoPage = lazy(() => import("./pages/auth/PrimeiroAcesso"));
 const DashboardPage = lazy(() => import("./pages/Dashboard"));
 const AlunosPage = lazy(() => import("./pages/Alunos"));
 const NovoAlunoPage = lazy(() => import("./pages/NovoAluno"));
@@ -71,6 +72,7 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/login" element={<LoginPage />} />
+                  <Route path="/primeiro-acesso" element={<PrimeiroAcessoPage />} />
                   <Route
                     path="/*"
                     element={

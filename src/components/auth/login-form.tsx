@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "@/contexts/AuthContext"
 import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
@@ -105,6 +105,12 @@ export function LoginForm({
           </form>
         </CardContent>
       </Card>
+      <div className="text-center text-sm font-medium text-muted-foreground">
+        Primeiro acesso?{" "}
+        <Link to="/primeiro-acesso" className="text-primary hover:underline hover:text-primary/80 transition-colors font-bold">
+          Crie sua senha
+        </Link>
+      </div>
       <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">
         Ao clicar em entrar, você concorda com nossos <a href="#">Termos de Serviço</a>{" "}
         e <a href="#">Política de Privacidade</a>.

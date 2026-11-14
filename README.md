@@ -1,4 +1,4 @@
-# Dojo Virtual - Frontend
+# Dojo Virtual — Frontend
 
 [![React](https://img.shields.io/badge/React-18-20232A?style=flat-square&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -6,7 +6,9 @@
 [![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-green.svg?style=flat-square)](./LICENSE)
 [![Repositório](https://img.shields.io/badge/GitHub-dojo--virtual-181717?style=flat-square&logo=github)](https://github.com/johnpaulo0602/dojo-virtual)
 
-Aplicação web para apoiar a gestão do **Dojo Virtual**, uma operação de jiu-jitsu, centralizando rotinas administrativas, pedagógicas e financeiras em uma única interface. O sistema foi pensado para dar visibilidade ao dia a dia da equipe e reduzir controles dispersos em planilhas, mensagens e processos manuais.
+Frontend do **Dojo Virtual**, um **projeto social**: uma aplicação web para apoiar a gestão de uma academia de jiu-jitsu, centralizando rotinas administrativas, pedagógicas e financeiras em uma única interface. O sistema foi pensado para dar visibilidade ao dia a dia da equipe e reduzir controles dispersos em planilhas, mensagens e processos manuais.
+
+> A API (FastAPI + PostgreSQL) está em **[johnpaulo0602/dojo-virtual-api](https://github.com/johnpaulo0602/dojo-virtual-api)**.
 
 ## Sobre o projeto
 
